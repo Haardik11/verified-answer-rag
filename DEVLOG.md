@@ -77,8 +77,32 @@ Verified twice with real questions against the real index:
   loosely accurate rather than strictly grounded. This is a live example
   of exactly the failure mode the next step is meant to catch.
 
-## 10. (In progress) Verifier / self-correction loop
-The actual differentiator. Adding a `verify` node that checks whether the
-synthesized answer is genuinely supported by the retrieved context, and a
-conditional branch that re-retrieves and retries when confidence is low,
-instead of just returning an unsupported answer.
+## 10. Verifier / self-correction loop
+The actual differentiator. `app/agent/verify.py` adds a separate LLM call
+(role=`"verifier"`) that judges whether a synthesized answer is genuinely
+supported by the retrieved context - tested standalone first against the
+real "correct facts, wrong source" case from step 9, and it correctly
+told the two apart (`grounded: True` vs `grounded: False`).
+
+`app/agent/graph.py` was then rewired into the full self-correcting loop:
+`retrieve -> synthesize -> verify`, with a conditional branch - if not
+grounded, `rewrite_query` (a new LLM call, role=`"query_rewrite"`)
+rephrases the search query and the loop retries, bounded by
+`max_attempts` so it can't run forever.
+
+Verified two real behaviors:
+- **Easy question** ("What was Q3 revenue?"): passed verification on the
+  first attempt, 0 retries - confirms the loop doesn't retry
+  unnecessarily when the answer is already well-grounded.
+- **Hard question** ("What is driving the operating expenses this
+  quarter?"): failed verification on all 3 attempts (hit `max_attempts`),
+  and correctly returned the best-effort answer with `grounded: False`
+  clearly flagged, instead of silently pretending it succeeded. Streaming
+  the graph's steps showed the verifier's rejection reason was somewhat
+  pedantic each time ("a factor" vs. "the main reason") rather than
+  catching the actual source-mislabeling bug from step 9 - a real,
+  honest finding: the retry *mechanism* is sound, but judgment quality is
+  bounded by the model doing the verifying. This is exactly why
+  `ROLE_MODELS` in `app/config.py` allows swapping a stronger model (e.g.
+  GPT-4o) into just the `verifier` role later without touching any
+  pipeline code - a natural next experiment once API keys are added.
