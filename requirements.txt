@@ -4,3 +4,4 @@ openai
 anthropic
 ollama
 fastembed
+qdrant-client
