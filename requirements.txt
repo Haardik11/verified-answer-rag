@@ -5,3 +5,4 @@ anthropic
 ollama
 fastembed
 qdrant-client
+rank-bm25
