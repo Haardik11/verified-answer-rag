@@ -6,3 +6,4 @@ ollama
 fastembed
 qdrant-client
 rank-bm25
+langgraph
