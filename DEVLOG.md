@@ -119,3 +119,54 @@ Verified for real: started the server with `uvicorn app.main:app`, sent an
 actual HTTP POST to `/ask`, and got back the correct grounded answer with
 full source chunks as JSON - the same result as calling `answer_question()`
 directly in Python, now reachable over HTTP.
+
+## 12. Manual testing via /docs, and hardening the verifier
+Tried the API by hand through FastAPI's auto-generated `/docs` page and
+found two real problems worth fixing:
+
+1. **Honest refusals were wrongly punished.** Asked "What was Q2 revenue?"
+   (neither document mentions Q2 at all). The synthesizer correctly said
+   "I don't know" every time - no hallucination - but the verifier still
+   marked it `NOT_GROUNDED`, because the original prompt only asked "is
+   every claim supported," and a refusal doesn't cleanly fit that framing.
+   Fixed by explicitly telling the verifier prompt that an honest "the
+   context doesn't say" is always a pass. Confirmed fixed: re-ran the same
+   question, got `grounded: True` on the first attempt.
+
+2. **The verifier sometimes wrote a verdict that contradicted its own
+   stated reason** (e.g. writing a reason that clearly described a pass,
+   then outputting `NOT_GROUNDED` anyway). Root cause: the prompt asked
+   for `VERDICT` before `REASON`, so the model committed to a conclusion
+   before actually reasoning through it. Fixed by reordering the prompt to
+   require reasoning first, verdict last, so the verdict is generated
+   *after* (and conditioned on) the written-out reasoning. Confirmed
+   fixed for the general case: ran the same good/bad test 3 times back to
+   back with `temperature=0.0` and got identical, self-consistent results
+   every time.
+
+Also reconsidered what "grounded" should even mean: the original prompt
+treated citing the wrong specific document (e.g. "the text file" when a
+fact was actually in the PDF) as a failure, on the theory that it was
+close to the source-mislabeling bug found in step 9. On reflection, that
+conflates two different things - **hallucination** (stating something not
+actually supported by any of the retrieved documents) versus **citation
+accuracy** (correctly saying which specific document a true fact came
+from). Only the first one is what the project's hallucination-rate goal
+actually cares about. Reworded the prompt to explicitly stop penalizing
+correct-fact/wrong-file-label answers, focusing purely on whether facts
+are real and unfabricated.
+
+**Honest remaining limitation:** even after both fixes, a follow-up test
+still caught the verifier giving `NOT_GROUNDED` to a correct-fact
+wrong-file-label answer, with a reason that itself described a pass. So
+the verdict/reason self-contradiction problem is *reduced*, not
+eliminated. Genuinely fabricated facts, however, were caught reliably and
+correctly in every test run tonight (e.g. an invented "50% increase due
+to a new office lease" was correctly rejected with an accurate reason).
+Conclusion: this is a capability ceiling of `llama3.2` (a small, free,
+local ~3B-parameter model used for cost-free development, per
+`app/config.py`) doing nuanced self-consistent judgment, not something
+further prompt tweaking is likely to fully solve. The documented next
+step is unchanged from step 10: swap `ROLE_MODELS["verifier"]` to a
+stronger model (e.g. GPT-4o) once API keys are added - no pipeline code
+changes required, by design.

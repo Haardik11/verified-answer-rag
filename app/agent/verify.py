@@ -1,8 +1,9 @@
 """
 Checks whether a synthesized answer is actually supported by the retrieved
 context, rather than trusting the synthesizer's output at face value. This
-is the core of the self-correction loop - it's what should catch cases
-like a correct fact attributed to the wrong source (see DEVLOG step 9).
+is the core of the self-correction loop - the thing it's meant to catch is
+hallucination (a fact not present anywhere in the context), not cosmetic
+issues like citing the wrong specific document for an otherwise real fact.
 """
 
 from dataclasses import dataclass
@@ -10,15 +11,24 @@ from dataclasses import dataclass
 from app.models.llm_router import call_llm
 from app.retrieval.vector_store import RetrievedChunk
 
-VERIFIER_PROMPT = """You are a strict fact-checker. Given a CONTEXT and an ANSWER, \
-decide whether every claim in the ANSWER - including which specific source it is \
-attributed to - is directly supported by the CONTEXT. Do not give credit for an \
-answer that is directionally correct but misattributes a claim to the wrong part \
-of the context, or adds any detail not present in the context.
+VERIFIER_PROMPT = """You are a strict fact-checker focused on catching hallucination: \
+does the ANSWER state anything that is not actually supported by the CONTEXT? Do not \
+give credit for an answer that adds any fact, number, or detail not present anywhere \
+in the CONTEXT.
 
-Respond in exactly this format, nothing else:
-VERDICT: GROUNDED or NOT_GROUNDED
-REASON: one sentence explaining why"""
+Do not penalize the ANSWER for citing the wrong specific document (e.g. saying "the \
+text file" when the detail was actually in the PDF) as long as the underlying fact \
+itself is real and present somewhere in the CONTEXT - that is a minor labeling slip, \
+not a hallucination, and should still be marked GROUNDED.
+
+If the ANSWER honestly states that the CONTEXT does not contain the information \
+needed to answer the QUESTION, and it does not invent an answer anyway, that is \
+GROUNDED - an honest "I don't know" is always a pass, never a failure.
+
+Think through your reasoning first, then give your verdict last so it actually
+follows from that reasoning. Respond in exactly this format, nothing else:
+REASON: one sentence explaining your judgment
+VERDICT: GROUNDED or NOT_GROUNDED - must directly follow from the REASON above"""
 
 
 @dataclass
