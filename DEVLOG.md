@@ -106,3 +106,16 @@ Verified two real behaviors:
   `ROLE_MODELS` in `app/config.py` allows swapping a stronger model (e.g.
   GPT-4o) into just the `verifier` role later without touching any
   pipeline code - a natural next experiment once API keys are added.
+
+## 11. FastAPI backend
+`app/main.py` wraps the agent in a real web API - one endpoint,
+`POST /ask`, that takes a question and returns the answer, its sources
+(with scores), and the verification status (`grounded`, `attempts`,
+`verification_reason`), so a future frontend can show the user not just
+an answer but how confident the system is in it. Also exposes `/health`
+and (free from FastAPI) interactive docs at `/docs`.
+
+Verified for real: started the server with `uvicorn app.main:app`, sent an
+actual HTTP POST to `/ask`, and got back the correct grounded answer with
+full source chunks as JSON - the same result as calling `answer_question()`
+directly in Python, now reachable over HTTP.
