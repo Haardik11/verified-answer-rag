@@ -7,3 +7,5 @@ fastembed
 qdrant-client
 rank-bm25
 langgraph
+fastapi
+uvicorn
