@@ -222,3 +222,23 @@ produced the identical, correct answer, literally citing
 `[data/sample.pdf#0]` instead of guessing "text file" - the original bug
 is fixed, with the exact real-world case that found it used as the
 regression test.
+
+## 15. Re-enabling strict citation checking in the verifier
+With the root cause fixed at the source (step 14) and both `verifier` and
+`synthesizer` now on the stronger Groq model, re-enabled the citation
+accuracy check in `VERIFIER_PROMPT` that had been relaxed back in step
+12. The verifier now checks two things again: hallucination (is every
+fact actually supported by the context) and citation accuracy (is a fact
+attributed to the correct specific source) - both are real correctness
+issues, and the earlier relaxation was a workaround for a weak model that
+kept getting citation checking itself wrong, not a permanent design
+decision.
+
+Re-ran the same 3-case test (good, mislabeled-source, hallucinated) 3
+times. Every run correctly returned `True`, `False`, `False` with
+accurate, self-consistent reasoning each time (e.g. explicitly naming
+"the PDF, not the text file" as the correct source for the mislabeled
+case) - the stronger model handles the stricter check reliably, closing
+the loop: the verifier is now both a hallucination check and a citation
+check, backing up the synthesizer's now-accurate citations as a safety
+net rather than a single point of failure.

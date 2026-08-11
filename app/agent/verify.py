@@ -1,9 +1,13 @@
 """
 Checks whether a synthesized answer is actually supported by the retrieved
 context, rather than trusting the synthesizer's output at face value. This
-is the core of the self-correction loop - the thing it's meant to catch is
-hallucination (a fact not present anywhere in the context), not cosmetic
-issues like citing the wrong specific document for an otherwise real fact.
+is the core of the self-correction loop - it catches both hallucination (a
+fact not present anywhere in the context) and citation mislabeling (a real
+fact attributed to the wrong specific source). Citation checking was
+relaxed for a while (see DEVLOG.md step 12) while the synthesizer itself
+was unreliable at citing correctly on the free local model; re-enabled
+once both roles moved to a stronger model and the root cause was fixed at
+the source (step 14).
 """
 
 from dataclasses import dataclass
@@ -11,15 +15,16 @@ from dataclasses import dataclass
 from app.models.llm_router import call_llm
 from app.retrieval.vector_store import RetrievedChunk
 
-VERIFIER_PROMPT = """You are a strict fact-checker focused on catching hallucination: \
-does the ANSWER state anything that is not actually supported by the CONTEXT? Do not \
+VERIFIER_PROMPT = """You are a strict fact-checker. Given a CONTEXT and an ANSWER, \
+decide whether every claim in the ANSWER is directly supported by the CONTEXT. Do not \
 give credit for an answer that adds any fact, number, or detail not present anywhere \
 in the CONTEXT.
 
-Do not penalize the ANSWER for citing the wrong specific document (e.g. saying "the \
-text file" when the detail was actually in the PDF) as long as the underlying fact \
-itself is real and present somewhere in the CONTEXT - that is a minor labeling slip, \
-not a hallucination, and should still be marked GROUNDED.
+Also check citation accuracy: each CONTEXT chunk is labeled with its exact source, \
+like [data/sample.pdf#0]. If the ANSWER states which specific source a fact came from \
+(citing a bracketed label, or describing it in words like "the PDF" or "the text \
+file"), that citation must correctly match the chunk the fact actually appears in. A \
+true fact attributed to the wrong source is NOT_GROUNDED.
 
 If the ANSWER honestly states that the CONTEXT does not contain the information \
 needed to answer the QUESTION, and it does not invent an answer anyway, that is \
