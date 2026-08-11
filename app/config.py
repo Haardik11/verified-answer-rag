@@ -6,9 +6,11 @@ Change any of these to swap providers without touching any pipeline code.
 "openai"    -> paid API. Good for roles that need real judgment (verifier).
 "anthropic" -> paid API. Same idea, different provider.
 "groq"      -> paid API (OpenAI-compatible). Hosts larger open-weight models
-               (e.g. Llama 3.3 70B) - used here for the verifier role, since
+               (e.g. Llama 3.3 70B) - used for verifier and synthesizer, since
                the free local 3B model wasn't reliably self-consistent at
-               judging whether an answer is grounded (see DEVLOG.md step 12).
+               judging whether an answer is grounded, and also tended to
+               paraphrase source citations incorrectly in its written answers
+               (see DEVLOG.md steps 12-13).
 """
 
 from dataclasses import dataclass
@@ -28,8 +30,5 @@ ROLE_MODELS = {
     # Judgment-heavy roles: use a stronger paid model once you have keys set up.
     "extractor": ModelConfig(provider="ollama", model="llama3.2"),
     "verifier": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
-    "synthesizer": ModelConfig(provider="ollama", model="llama3.2"),
+    "synthesizer": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
 }
-
-# Example of what you could change later, once you add more API keys to .env:
-# ROLE_MODELS["synthesizer"] = ModelConfig(provider="openai", model="gpt-4o-mini")

@@ -21,7 +21,11 @@ from app.retrieval.vector_store import RetrievedChunk
 
 SYNTHESIZER_PROMPT = (
     "Answer the user's question using only the provided context. "
-    "If the context doesn't contain the answer, say so instead of guessing."
+    "If the context doesn't contain the answer, say so instead of guessing. "
+    "Each context chunk is labeled with its exact source in brackets, like "
+    "[data/sample.pdf#0]. If you state where a fact comes from, cite that exact "
+    "bracketed label - never paraphrase or guess at a source name (e.g. don't say "
+    "'the text file' or 'the PDF' from memory; use the literal label given)."
 )
 
 QUERY_REWRITE_PROMPT = (

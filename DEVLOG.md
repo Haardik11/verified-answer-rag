@@ -200,3 +200,25 @@ verdict/reason pairs, versus the recurring inconsistencies seen with the
 capability ceiling, not a flaw in the verification approach itself -
 solved by scaling up the model for just this one role, exactly the
 tradeoff `ROLE_MODELS` was designed to make easy.
+
+## 14. Fixing citation accuracy in the written answer
+Separate from the verifier's internal judgment, the *synthesizer's own
+written answer text* still had the original step-9 bug: it would say
+"the text file" or "the PDF" in prose, sometimes incorrectly, even though
+the underlying fact was true and the retrieval metadata itself was always
+accurate (`RetrievedChunk.source` never lies - only the AI's narration
+about it could be wrong).
+
+Two changes: (1) `SYNTHESIZER_PROMPT` in `app/agent/graph.py` now
+explicitly tells the model that each context chunk is labeled with an
+exact bracketed source (e.g. `[data/sample.pdf#0]`), and to cite that
+literal label instead of paraphrasing a source name from memory. (2)
+`ROLE_MODELS["synthesizer"]` also switched from local `llama3.2` to the
+same Groq 70B model now used for `verifier`.
+
+Re-ran the exact question that originally exposed this bug ("What is
+driving the operating expenses this quarter?") 3 times. Every run
+produced the identical, correct answer, literally citing
+`[data/sample.pdf#0]` instead of guessing "text file" - the original bug
+is fixed, with the exact real-world case that found it used as the
+regression test.
