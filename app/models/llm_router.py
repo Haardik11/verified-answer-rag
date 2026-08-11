@@ -6,7 +6,12 @@ automatically, no code changes anywhere else.
 """
 
 import os
+
+from dotenv import load_dotenv
+
 from app.config import ROLE_MODELS
+
+load_dotenv()
 
 
 def call_llm(role: str, messages: list[dict], temperature: float = 0.2, max_tokens: int = 1024) -> str:
@@ -21,6 +26,8 @@ def call_llm(role: str, messages: list[dict], temperature: float = 0.2, max_toke
         return _call_anthropic(cfg.model, messages, temperature, max_tokens)
     elif cfg.provider == "ollama":
         return _call_ollama(cfg.model, messages, temperature, max_tokens)
+    elif cfg.provider == "groq":
+        return _call_groq(cfg.model, messages, temperature, max_tokens)
     else:
         raise ValueError(f"Unknown provider '{cfg.provider}' for role '{role}'")
 
@@ -45,6 +52,16 @@ def _call_anthropic(model: str, messages: list[dict], temperature: float, max_to
         model=model, system=system, messages=user_messages, max_tokens=max_tokens, temperature=temperature
     )
     return resp.content[0].text
+
+
+def _call_groq(model: str, messages: list[dict], temperature: float, max_tokens: int) -> str:
+    from openai import OpenAI  # Groq's API is OpenAI-compatible, so the same SDK works pointed at their endpoint
+
+    client = OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
+    resp = client.chat.completions.create(
+        model=model, messages=messages, temperature=temperature, max_tokens=max_tokens
+    )
+    return resp.choices[0].message.content
 
 
 def _call_ollama(model: str, messages: list[dict], temperature: float, max_tokens: int) -> str:

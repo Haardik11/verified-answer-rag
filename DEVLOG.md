@@ -170,3 +170,33 @@ further prompt tweaking is likely to fully solve. The documented next
 step is unchanged from step 10: swap `ROLE_MODELS["verifier"]` to a
 stronger model (e.g. GPT-4o) once API keys are added - no pipeline code
 changes required, by design.
+
+## 13. Swapping the verifier to a stronger model (Groq)
+Followed through on the plan from step 12: added Groq as a fourth
+provider in `app/models/llm_router.py`. Groq's API is OpenAI-compatible,
+so this reused the existing `openai` SDK (already a dependency) pointed
+at Groq's endpoint instead of writing a new integration - no new pip
+package needed. Also fixed a real, separate gap found along the way:
+`python-dotenv` had been listed in `requirements.txt` since the very
+first commit but nothing ever actually called `load_dotenv()`, so keys
+in `.env` were silently never being read. Added that call to
+`llm_router.py`.
+
+`ROLE_MODELS["verifier"]` in `app/config.py` now points at
+`llama-3.3-70b-versatile` via Groq (a 70-billion-parameter model) instead
+of the local 3B `llama3.2` - `synthesizer` and other roles stay on free
+local Ollama, since the consistency problem was specific to the judgment
+task, not generation.
+
+Re-ran the exact same 3-case test from step 12 (good answer, correct-fact
+wrong-source-label answer, genuinely fabricated fact) 3 times back to
+back. Every single run, every case, came back correct **and**
+self-consistent - the reasoning always matched the verdict, including
+the mislabeled-source case explicitly being described as "a minor
+labeling slip" rather than a failure, exactly matching the intended
+definition of "grounded." Zero contradictions across 9 total
+verdict/reason pairs, versus the recurring inconsistencies seen with the
+3B model in step 12. Confirms the hypothesis: this was a small-model
+capability ceiling, not a flaw in the verification approach itself -
+solved by scaling up the model for just this one role, exactly the
+tradeoff `ROLE_MODELS` was designed to make easy.
