@@ -40,7 +40,12 @@ CHITCHAT_PROMPT = (
 
 SYNTHESIZER_PROMPT = (
     "Answer the user's question using only the provided context, in clear, natural "
-    "prose. If the context doesn't contain the answer, say so instead of guessing. "
+    "prose. If the context doesn't contain the answer, your entire response must be a "
+    "short, direct statement that you don't have that information in the indexed "
+    "documents - one sentence, nothing more. In that case, do not: guess or supply an "
+    "answer from outside general knowledge (not even something simple like basic "
+    "arithmetic); describe or summarize what the context IS about instead of answering; "
+    "or explain why the context doesn't cover it. Just say you don't know and stop. "
     "Do not name or cite which specific document a fact came from, and do not include "
     "bracketed labels like [data/sample.pdf#0] in your answer - the exact source is "
     "tracked separately and shown to the user automatically, so just state the answer "

@@ -332,3 +332,22 @@ as a normal unsupported claim (which correctly fails, since it isn't in
 the context). Verified 3/3 runs on both the bug case (now correctly
 `NOT_GROUNDED`) and a genuine pure-refusal case (still correctly
 `GROUNDED`) - no regression.
+
+## 21. Tightening the synthesizer's refusal wording
+Step 20 fixed the verifier catching this case, but the underlying
+question - the CSK trophies question and 1+1 both showed it - was that
+the synthesizer's own refusals were poor quality even when caught
+correctly: it would ramble describing what the context *is* about
+("the context appears to be related to a company's quarterly report,
+discussing revenue...") instead of just saying it doesn't know, and for
+1+1 specifically it kept tacking "the answer is 2" onto the end despite
+already being told not to guess.
+
+Rewrote `SYNTHESIZER_PROMPT` to require that a refusal be *only* a short,
+direct "I don't have that information" - no context summary, no
+explanation, and an explicit ban on supplying an answer from outside
+general knowledge, calling out arithmetic specifically since that was
+the exact case that slipped through. Verified: both the CSK and 1+1
+questions now produce a one-sentence "I don't have that information."
+and pass immediately (`grounded=True, attempts=0`) instead of needing
+the verifier to catch and retry a bad first attempt.
