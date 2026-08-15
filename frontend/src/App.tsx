@@ -82,13 +82,12 @@ function App() {
         ...chat,
         messages: chat.messages.map((m) => (m.id === pendingMsg.id ? { ...m, pending: false, response } : m)),
       }));
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Couldn't reach the backend. Is the FastAPI server running?";
       updateChat(chatId, (chat) => ({
         ...chat,
         messages: chat.messages.map((m) =>
-          m.id === pendingMsg.id
-            ? { ...m, pending: false, error: "Couldn't reach the backend. Is the FastAPI server running?" }
-            : m,
+          m.id === pendingMsg.id ? { ...m, pending: false, error: message } : m,
         ),
       }));
     } finally {

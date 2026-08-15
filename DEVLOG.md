@@ -388,3 +388,25 @@ honestly un-badged as unverified), a normal document question (unchanged
 behavior), and an out-of-scope-but-plausible business question
 (correctly stayed on the document path and refused honestly, sources now
 hidden).
+
+## 23. Fixing a real "stuck on Thinking..." bug
+Manual testing: a question hit Groq's daily quota again mid-request, and
+the UI just sat on "Thinking..." forever instead of showing an error.
+Checked the actual server logs (not guessed) and found the real cause:
+`app/main.py`'s `/ask` endpoint had no exception handling at all, so an
+unhandled `RateLimitError` produced an ungraceful failure the frontend
+couldn't parse cleanly - and separately, the frontend's own error path
+was already broken: `api.ts` discarded the response body on a failed
+request instead of reading it, and `App.tsx`'s catch block used a bare
+`catch {}` that threw away whatever error it caught in favor of one
+hardcoded generic message regardless of the real cause.
+
+Three-part fix: (1) `/ask` now catches `RateLimitError` specifically and
+returns a proper `503` with a clear message, plus a generic `500`
+fallback for anything else - confirmed the response is fast (under 1s)
+and parseable instead of a generic unhandled error. (2) `api.ts` now
+reads the response body and surfaces the backend's actual `detail`
+message. (3) `App.tsx`'s catch block now uses the real caught error's
+message instead of discarding it. Together this turns an indefinite,
+unexplained "stuck" state into an honest, specific error message the
+user can actually act on.

@@ -8,8 +8,9 @@ but how confident the system actually is in it.
 Run with: PYTHONPATH=. uvicorn app.main:app --reload
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from openai import RateLimitError
 from pydantic import BaseModel
 
 from app.agent.graph import answer_question
@@ -54,7 +55,19 @@ def health() -> dict:
 
 @app.post("/ask", response_model=AskResponse)
 def ask(request: AskRequest) -> AskResponse:
-    result = answer_question(request.question)
+    try:
+        result = answer_question(request.question)
+    except RateLimitError:
+        # Without this, an unhandled exception here can leave the frontend's
+        # fetch() hanging indefinitely instead of surfacing a clear error -
+        # found via a real "stuck on Thinking..." report after exhausting
+        # Groq's free-tier daily token quota during heavy testing.
+        raise HTTPException(
+            status_code=503,
+            detail="The AI provider's rate limit was hit. Please wait a few minutes and try again.",
+        )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Something went wrong answering that question.")
     return AskResponse(
         answer=result["answer"],
         route_type=result["route_type"],

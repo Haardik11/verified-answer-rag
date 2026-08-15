@@ -9,7 +9,8 @@ export async function askQuestion(question: string): Promise<AskResponse> {
     body: JSON.stringify({ question }),
   });
   if (!res.ok) {
-    throw new Error(`Request failed: ${res.status}`);
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.detail ?? `Request failed: ${res.status}`);
   }
   return res.json();
 }
