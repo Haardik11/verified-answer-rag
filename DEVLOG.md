@@ -410,3 +410,34 @@ message. (3) `App.tsx`'s catch block now uses the real caught error's
 message instead of discarding it. Together this turns an indefinite,
 unexplained "stuck" state into an honest, specific error message the
 user can actually act on.
+
+## 24. Evaluation harness (built, not yet validated with a live run)
+Built the actual measurement behind this project's core claim, instead
+of leaving "reduces hallucination" as an unverified assertion.
+`app/eval/cases.py` defines 11 hand-written test cases with ground truth
+verified by directly re-reading all four indexed documents in full (not
+guessed) - 7 answerable questions with specific expected facts (exact
+figures like "4.2 million," "108 percent," "142" employees), and 4
+questions the documents genuinely don't answer (including the "Q2
+revenue" and "1+1" cases already investigated in steps 20-22).
+`app/eval/scorer.py` scores each run: for answerable cases, hallucinated
+if any expected fact is missing from the answer, or if the system
+refused something it should have answered; for unanswerable cases,
+hallucinated only if the system gave a confident document-grounded
+answer instead of refusing or routing to general knowledge.
+`scripts/run_eval.py` runs the full set (or a `[limit]` subset) through
+the real agent, prints per-case results, and writes a full JSON report.
+
+Deliberately kept to 11 cases, not a much larger set: each question can
+cost thousands of tokens once retries are counted (worked out in detail
+earlier today), so a bigger batch risked exceeding the entire daily free
+quota in a single run, not just needing a short wait.
+
+Honest status: attempted to validate on a 2-case subset and immediately
+hit the same Groq daily quota wall (99,669/100,000 used, no headroom
+left at all from today's heavy testing). The harness code itself is
+confirmed sound - it ran correctly through routing, retrieval, and the
+first LLM call before failing on the actual network request, and all
+modules import cleanly with no errors - but a real end-to-end run with
+actual hallucination-rate numbers has not happened yet. That's the
+immediate next step once quota is available again.
