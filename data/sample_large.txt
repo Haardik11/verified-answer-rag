@@ -1,0 +1,118 @@
+Quarterly Business Review - Q3
+
+Executive Summary
+
+Q3 was a strong quarter overall, with total revenue reaching 4.2 million
+dollars, a 12 percent increase over the prior year quarter. Growth was
+driven primarily by expansion in the enterprise segment, while the
+self-serve tier remained roughly flat and the SMB tier saw a slight
+seasonal slowdown. Leadership remains confident heading into Q4, though
+macro conditions continue to introduce uncertainty into the pipeline.
+
+Revenue by Segment
+
+Enterprise revenue grew 22 percent year over year to 2.1 million dollars,
+now representing exactly half of total revenue. This growth was driven by
+seven new enterprise logos signed during the quarter, including two
+expansion deals with existing customers that upgraded from mid-market
+contracts. Average enterprise contract value increased from 145,000
+dollars to 168,000 dollars, reflecting both price increases introduced in
+Q2 and a shift toward multi-year commitments.
+
+SMB revenue came in at 1.3 million dollars, down 4 percent quarter over
+quarter due to typical seasonal purchasing slowdown in the back half of
+the year, consistent with the pattern observed in the same period last
+year. Churn in the SMB segment ticked up slightly to 3.1 percent monthly,
+compared to 2.7 percent in Q2, attributed mostly to two competitors
+offering aggressive introductory pricing.
+
+Self-serve revenue was 800,000 dollars, essentially flat compared to Q2.
+Signups grew 8 percent, but average revenue per account declined slightly
+as a larger proportion of new signups came from the free tier and had not
+yet converted to paid plans by quarter end.
+
+Expense Breakdown
+
+Total operating expenses were 2.1 million dollars, flat compared to Q2,
+driven mainly by headcount stability across engineering and sales teams -
+no net new hires were made in either organization during the quarter,
+though several open requisitions remain in the pipeline for Q4.
+
+Cost of goods sold was 620,000 dollars, up slightly from 590,000 dollars
+in Q2, due to increased cloud infrastructure spend supporting the new
+analytics feature launched in August. Research and development spend was
+740,000 dollars. Sales and marketing spend was 520,000 dollars, including
+a one-time 80,000 dollar sponsorship of an industry conference in
+September. General and administrative expenses were 220,000 dollars.
+
+Headcount and Hiring
+
+Total headcount at quarter end was 142 employees, unchanged from Q2.
+Engineering remains the largest function at 58 people, followed by sales
+and customer success at 41, and marketing at 18. Two senior engineering
+hires that were expected to start in Q3 had their start dates pushed to
+early Q4 due to visa processing delays. The company plans to add
+approximately 12 net new roles in Q4, concentrated in enterprise sales
+and platform engineering.
+
+Customer Metrics
+
+Net revenue retention was 108 percent for the quarter, down from 112
+percent in Q2, primarily due to the uptick in SMB churn described above.
+Enterprise net revenue retention remained strong at 121 percent. Net
+promoter score held steady at 42, consistent with the trailing
+four-quarter average. Customer support ticket volume increased 15
+percent quarter over quarter, largely attributable to onboarding
+questions related to the new analytics feature; median first response
+time remained under two hours throughout the quarter.
+
+Product Launches
+
+The most significant product launch of the quarter was the analytics
+dashboard, released to general availability in August after a six-week
+beta with 40 enterprise customers. Early adoption has been strong, with
+31 percent of enterprise accounts enabling the feature within the first
+month of general availability. A smaller update to the mobile app,
+focused on notification reliability, shipped in September and reduced
+reported notification-delivery complaints by roughly 60 percent
+month over month.
+
+Risk Factors
+
+The risk factors section notes that revenue recognition timing may shift
+up to 3 percent of quarterly revenue between reporting periods due to
+contract structure changes introduced this quarter, specifically the
+shift toward multi-year enterprise commitments described above, which
+are recognized on a different schedule than the annual contracts they
+are replacing. Additionally, continued SMB churn at current rates, if
+sustained for more than two consecutive quarters, could meaningfully
+affect full-year guidance. Macroeconomic conditions, particularly
+interest rate uncertainty, continue to be cited by prospects as a factor
+lengthening enterprise sales cycles.
+
+Competitive Landscape
+
+Two competitors introduced aggressive discounting in the SMB segment
+during Q3, which the team believes is the primary driver of the elevated
+SMB churn this quarter. In the enterprise segment, competitive dynamics
+were largely unchanged; win rates against the two primary enterprise
+competitors held steady at approximately 58 percent in competitive deals
+where the outcome was tracked.
+
+Q4 Guidance
+
+Looking ahead to Q4, guidance remains cautious given macro uncertainty,
+though the pipeline of enterprise deals in late-stage negotiation
+suggests upside potential if even half of them close within the quarter.
+Management is targeting Q4 revenue of 4.5 to 4.7 million dollars,
+implying 7 to 12 percent quarter-over-quarter growth, with the wide range
+reflecting uncertainty in enterprise deal timing.
+
+Capital and Cash Position
+
+The company ended the quarter with 18.4 million dollars in cash and cash
+equivalents, providing approximately 22 months of runway at the current
+burn rate. No new financing activity occurred during the quarter. The
+board approved a refreshed employee equity pool in September, increasing
+the available pool by 1.5 percent of fully diluted shares to support
+planned Q4 hiring.
