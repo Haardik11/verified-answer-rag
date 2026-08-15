@@ -35,9 +35,15 @@ citation match which chunk the fact actually appears in? A true fact attributed 
 wrong source is NOT SUPPORTED.
 Mark each claim SUPPORTED or NOT SUPPORTED with a brief reason.
 
-Exception: if the ANSWER honestly states the CONTEXT doesn't contain the information \
-needed and does not invent an answer anyway, that whole ANSWER is GROUNDED - an honest \
-"I don't know" always passes.
+Exception: an ANSWER is only covered by the honest-refusal exception if refusing is ALL \
+it does - stating the CONTEXT lacks the information, with nothing else. The moment the \
+ANSWER supplies any actual value, number, or fact beyond that refusal - even something \
+true, even something as basic as general knowledge like "1+1 is 2" - it no longer \
+qualifies for this exception, and that added claim must be checked against the CONTEXT \
+like any other claim in Step 2, where it will fail as NOT SUPPORTED since the CONTEXT \
+doesn't contain it. "Answered honestly that the context lacks X, then answered anyway \
+using outside knowledge" is NOT a pass - it is exactly the kind of unsupported claim \
+this check exists to catch, regardless of how obviously true that outside fact is.
 
 Worked example of check (c), since this one is easy to gloss over: if CONTEXT contains \
 [data/report.pdf#0] "Expenses were flat due to stable headcount" and [data/notes.txt#0] \

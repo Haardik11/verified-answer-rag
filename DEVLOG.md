@@ -308,3 +308,27 @@ re-confirmed both the citation check and the new multi-claim check pass
 reliably together, 3/3 runs. Lesson: when a previously-passing test
 starts failing after an unrelated change, verify the test's assumptions
 against current reality before assuming the code regressed.
+
+## 20. Fixing the "honest refusal" exception being too permissive
+Manual testing: asked "what is 1+1" (obviously outside the indexed
+documents). The synthesizer replied that the context doesn't contain the
+answer - correctly - and then answered anyway from general knowledge
+("the answer to 1+1 is 2"), which directly violates its own instruction
+to say so instead of guessing. Worse: the verifier still marked this
+`Verified`. Its own stated reason gave away the bug: it admitted the
+answer "does provide an unsolicited true fact" and passed it anyway.
+
+Root cause: the honest-refusal exception in `VERIFIER_PROMPT` said an
+answer passes if it "states the context lacks the info and does not
+invent an answer anyway" - the model was reading "invent" narrowly as
+"lie about what's in the context," not "add any claim not sourced from
+the context at all," so a refusal-plus-outside-knowledge-guess slipped
+through as if it were a pure refusal.
+
+Fix: rewrote the exception to require that refusing is *all* the answer
+does - the moment it supplies any value beyond that, even something as
+obviously true as "1+1 is 2," it no longer qualifies, and gets checked
+as a normal unsupported claim (which correctly fails, since it isn't in
+the context). Verified 3/3 runs on both the bug case (now correctly
+`NOT_GROUNDED`) and a genuine pure-refusal case (still correctly
+`GROUNDED`) - no regression.
