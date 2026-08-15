@@ -23,12 +23,12 @@ class ModelConfig:
 
 
 ROLE_MODELS = {
-    # Cheap/simple roles: fine on a small local model while developing.
-    "router": ModelConfig(provider="ollama", model="llama3.2"),
-    "query_rewrite": ModelConfig(provider="ollama", model="llama3.2"),
-
-    # Judgment-heavy roles: use a stronger paid model once you have keys set up.
+    # Not yet used by any pipeline code - placeholder for a future feature.
     "extractor": ModelConfig(provider="ollama", model="llama3.2"),
+
+    # Actually used roles - all on Groq, so no local Ollama server is required to run this project.
+    "router": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
+    "query_rewrite": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
     "verifier": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
     "synthesizer": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
 }

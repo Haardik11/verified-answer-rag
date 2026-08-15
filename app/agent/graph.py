@@ -1,13 +1,19 @@
 """
-The self-correcting RAG loop: retrieve -> synthesize -> verify, and if the
-verifier says the answer isn't grounded in the retrieved context, rewrite
-the search query and try again (bounded by max_attempts so it can't loop
-forever). This is the Corrective RAG / Self-RAG pattern - the thing that
-differentiates this project from a basic retrieve-then-generate chatbot.
+The self-correcting RAG loop: route -> retrieve -> synthesize -> verify, and
+if the verifier says the answer isn't grounded in the retrieved context,
+rewrite the search query and try again (bounded by max_attempts so it can't
+loop forever). This is the Corrective RAG / Self-RAG pattern - the thing
+that differentiates this project from a basic retrieve-then-generate
+chatbot.
 
 See DEVLOG.md for why this exists: a real test run produced a correct fact
 attributed to the wrong source, and the plain retrieve->synthesize loop had
 no way to catch that. This graph is what catches it.
+
+The routing step exists because a real test asking a plain greeting ("hi")
+still ran full retrieval and showed 5 unrelated source chunks marked
+"Verified" - retrieval and verification only make sense for actual
+questions about the documents, not conversational messages.
 """
 
 from typing import TypedDict
@@ -18,6 +24,19 @@ from app.agent.verify import verify_answer
 from app.models.llm_router import call_llm
 from app.retrieval.hybrid import hybrid_search
 from app.retrieval.vector_store import RetrievedChunk
+
+ROUTER_PROMPT = (
+    "Classify the user's message as exactly one word. Respond with DOCUMENT_QUESTION "
+    "if it's a real question that should be answered by looking up indexed documents. "
+    "Respond with CHITCHAT if it's a greeting, thanks, or general conversation that "
+    "doesn't need document lookup. Respond with only that one word, nothing else."
+)
+
+CHITCHAT_PROMPT = (
+    "You are the assistant for a document Q&A tool. Respond naturally and briefly to "
+    "the user's message. If relevant, mention that you can answer questions about the "
+    "indexed documents."
+)
 
 SYNTHESIZER_PROMPT = (
     "Answer the user's question using only the provided context, in clear, natural "
@@ -38,12 +57,36 @@ QUERY_REWRITE_PROMPT = (
 class AgentState(TypedDict):
     question: str  # the original question - never rewritten, used for the final answer
     search_query: str  # what actually gets searched - may get rewritten on retry
+    is_chitchat: bool  # true if routed away from retrieval/verification entirely
     chunks: list[RetrievedChunk]
     answer: str
     grounded: bool
     verification_reason: str
     attempts: int
     max_attempts: int
+
+
+def route(state: AgentState) -> dict:
+    messages = [
+        {"role": "system", "content": ROUTER_PROMPT},
+        {"role": "user", "content": state["question"]},
+    ]
+    response = call_llm(role="router", messages=messages, temperature=0.0)
+    return {"is_chitchat": "CHITCHAT" in response.upper()}
+
+
+def chitchat_reply(state: AgentState) -> dict:
+    messages = [
+        {"role": "system", "content": CHITCHAT_PROMPT},
+        {"role": "user", "content": state["question"]},
+    ]
+    answer = call_llm(role="synthesizer", messages=messages)
+    return {
+        "answer": answer,
+        "chunks": [],
+        "grounded": True,
+        "verification_reason": "Conversational message - no document lookup was needed.",
+    }
 
 
 def retrieve(state: AgentState) -> dict:
@@ -80,6 +123,10 @@ def rewrite_query(state: AgentState) -> dict:
     return {"search_query": new_query.strip(), "attempts": state["attempts"] + 1}
 
 
+def route_after_classify(state: AgentState) -> str:
+    return "chitchat" if state["is_chitchat"] else "document"
+
+
 def route_after_verify(state: AgentState) -> str:
     if state["grounded"] or state["attempts"] >= state["max_attempts"]:
         return "end"
@@ -88,12 +135,16 @@ def route_after_verify(state: AgentState) -> str:
 
 def build_graph():
     graph = StateGraph(AgentState)
+    graph.add_node("route", route)
+    graph.add_node("chitchat_reply", chitchat_reply)
     graph.add_node("retrieve", retrieve)
     graph.add_node("synthesize", synthesize)
     graph.add_node("verify", verify)
     graph.add_node("rewrite_query", rewrite_query)
 
-    graph.add_edge(START, "retrieve")
+    graph.add_edge(START, "route")
+    graph.add_conditional_edges("route", route_after_classify, {"chitchat": "chitchat_reply", "document": "retrieve"})
+    graph.add_edge("chitchat_reply", END)
     graph.add_edge("retrieve", "synthesize")
     graph.add_edge("synthesize", "verify")
     graph.add_conditional_edges("verify", route_after_verify, {"end": END, "retry": "rewrite_query"})
@@ -108,6 +159,7 @@ def answer_question(question: str, max_attempts: int = 2) -> AgentState:
     initial_state: AgentState = {
         "question": question,
         "search_query": question,
+        "is_chitchat": False,
         "chunks": [],
         "answer": "",
         "grounded": False,
