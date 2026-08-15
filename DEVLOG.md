@@ -242,3 +242,69 @@ case) - the stronger model handles the stricter check reliably, closing
 the loop: the verifier is now both a hallucination check and a citation
 check, backing up the synthesizer's now-accurate citations as a safety
 net rather than a single point of failure.
+
+## 16. React frontend
+Built the first real UI: `frontend/` (Vite + React + TypeScript +
+Tailwind), a chat interface calling the FastAPI `/ask` endpoint. Includes
+a message list with user/assistant bubbles, a "Verified"/"Unverified"
+badge reflecting the real `grounded` field, a collapsible sources panel,
+and a relevant-excerpt highlighter (`lib/excerpt.ts`) that finds the
+best-matching sentence within a source chunk by keyword overlap instead
+of showing an arbitrary text cutoff. Later extended with a ChatGPT-style
+sidebar (multiple chats, persisted to `localStorage`, create/delete) and
+a full visual redesign to a warm, Claude.ai-inspired palette with
+`framer-motion` animations throughout (message entrances, sidebar
+list/delete transitions, sources panel accordion expand) after initial
+feedback that the first dark-theme version felt flat and generic.
+
+## 17. Larger sample documents
+Added `data/sample_large.txt` and `data/sample_large.pdf` (~900 words
+each, multiple distinct sections) since the original 2 samples were too
+short to produce more than 1 chunk each, meaning retrieval had nothing to
+meaningfully narrow down between. Verified real narrowing behavior: e.g.
+"Was there a security incident?" correctly retrieved specifically
+`sample_large.pdf` chunk 2 of 5 (the Security Incidents section), not the
+whole document.
+
+## 18. Message router: skipping retrieval for non-document messages
+Found via manual testing: sending a plain "Hello" still ran full
+retrieval and showed 5 unrelated source chunks marked "Verified" - there
+was no step distinguishing a real document question from conversational
+chit-chat. Added a `route` node (role=`"router"`, the config had reserved
+this role since the project's first commit but nothing used it until
+now) that classifies each message, branching to either a direct
+conversational reply (no retrieval, no verification, no sources) or the
+existing retrieve/synthesize/verify loop. Confirmed: greetings and
+"thanks" correctly skip retrieval entirely (0 chunks), real questions are
+unaffected.
+
+## 19. Hardening the verifier against multi-claim distortion
+Manual testing surfaced a serious gap: a dense, multi-fact answer
+("tell me about Q2") contained two real errors - a revenue comparison
+that conflated a year-over-year stat with a quarter-over-quarter one, and
+an SMB revenue trend with the direction inverted (said "up" when the
+source said "down") and attributed to a fabricated "Q1" reference - and
+the verifier still marked it `Verified`. Root cause: the verifier judged
+answers holistically rather than checking each individual claim, and
+strayed further once the answer's claim count grew.
+
+Fix: rewrote `VERIFIER_PROMPT` to require an explicit numbered
+claim-by-claim breakdown before any verdict, with specific instructions
+to check comparison direction and reference period for each claim, not
+just whether the same numbers appear somewhere in the context. Confirmed
+fixed, 3/3 consistent runs.
+
+This surfaced a **false alarm** worth recording: an early version of this
+fix appeared to break the working citation-accuracy check from step 15
+(a mislabeled-source case started passing again). Investigating properly
+- by directly inspecting file contents rather than re-guessing at prompts
+- found the real cause: `sample_large.txt` (step 17) happened to reuse
+near-identical wording from the original `sample.pdf`, so the "wrong"
+citation in the test was no longer actually wrong once both documents
+were in the same index. The verifier was right; the test had gone stale.
+Rewrote the test against a fact confirmed (by directly loading and
+grep-checking the source files) to be unique to one document, and
+re-confirmed both the citation check and the new multi-claim check pass
+reliably together, 3/3 runs. Lesson: when a previously-passing test
+starts failing after an unrelated change, verify the test's assumptions
+against current reality before assuming the code regressed.
