@@ -13,7 +13,13 @@ no way to catch that. This graph is what catches it.
 The routing step exists because a real test asking a plain greeting ("hi")
 still ran full retrieval and showed 5 unrelated source chunks marked
 "Verified" - retrieval and verification only make sense for actual
-questions about the documents, not conversational messages.
+questions about the documents, not conversational messages. The third
+route (general knowledge) exists for the same reason a strict refusal for
+something like "what is 1+1" felt wrong: the fix isn't to let the verifier
+be lenient about ungrounded answers (that would dilute what "Verified"
+means for everything else) - it's to honestly label an answer as *not*
+grounded in the documents rather than either refusing pointlessly or
+falsely calling it "Verified".
 """
 
 from typing import TypedDict
@@ -26,16 +32,24 @@ from app.retrieval.hybrid import hybrid_search
 from app.retrieval.vector_store import RetrievedChunk
 
 ROUTER_PROMPT = (
-    "Classify the user's message as exactly one word. Respond with DOCUMENT_QUESTION "
-    "if it's a real question that should be answered by looking up indexed documents. "
-    "Respond with CHITCHAT if it's a greeting, thanks, or general conversation that "
-    "doesn't need document lookup. Respond with only that one word, nothing else."
+    "Classify the user's message as exactly one word.\n"
+    "DOCUMENT_QUESTION - a real question that should be answered by looking up indexed documents.\n"
+    "CHITCHAT - a greeting, thanks, or general conversation that doesn't need document lookup.\n"
+    "GENERAL_KNOWLEDGE - a real question, but one answerable from well-known common knowledge "
+    "(basic arithmetic, common facts) that obviously has nothing to do with indexed business "
+    "documents, so looking them up would be pointless.\n"
+    "Respond with only that one word, nothing else."
 )
 
 CHITCHAT_PROMPT = (
     "You are the assistant for a document Q&A tool. Respond naturally and briefly to "
     "the user's message. If relevant, mention that you can answer questions about the "
     "indexed documents."
+)
+
+GENERAL_KNOWLEDGE_PROMPT = (
+    "Answer the user's question directly and briefly using your own general knowledge. "
+    "Do not mention documents or context - this question doesn't need them."
 )
 
 SYNTHESIZER_PROMPT = (
@@ -58,13 +72,16 @@ QUERY_REWRITE_PROMPT = (
     "Respond with only the rewritten query, nothing else."
 )
 
+REFUSAL_PREFIX = "i don't have that information"
+
 
 class AgentState(TypedDict):
     question: str  # the original question - never rewritten, used for the final answer
     search_query: str  # what actually gets searched - may get rewritten on retry
-    is_chitchat: bool  # true if routed away from retrieval/verification entirely
+    route_type: str  # "document" | "chitchat" | "general_knowledge"
     chunks: list[RetrievedChunk]
     answer: str
+    is_refusal: bool  # true if the synthesizer's answer was a plain "I don't have that information"
     grounded: bool
     verification_reason: str
     attempts: int
@@ -76,8 +93,14 @@ def route(state: AgentState) -> dict:
         {"role": "system", "content": ROUTER_PROMPT},
         {"role": "user", "content": state["question"]},
     ]
-    response = call_llm(role="router", messages=messages, temperature=0.0)
-    return {"is_chitchat": "CHITCHAT" in response.upper()}
+    response = call_llm(role="router", messages=messages, temperature=0.0).upper()
+    if "GENERAL_KNOWLEDGE" in response:
+        route_type = "general_knowledge"
+    elif "CHITCHAT" in response:
+        route_type = "chitchat"
+    else:
+        route_type = "document"
+    return {"route_type": route_type}
 
 
 def chitchat_reply(state: AgentState) -> dict:
@@ -94,6 +117,20 @@ def chitchat_reply(state: AgentState) -> dict:
     }
 
 
+def general_knowledge_reply(state: AgentState) -> dict:
+    messages = [
+        {"role": "system", "content": GENERAL_KNOWLEDGE_PROMPT},
+        {"role": "user", "content": state["question"]},
+    ]
+    answer = call_llm(role="synthesizer", messages=messages)
+    return {
+        "answer": answer,
+        "chunks": [],
+        "grounded": False,  # not grounded in the documents by definition - this is the point
+        "verification_reason": "Answered from general knowledge, not verified against your documents.",
+    }
+
+
 def retrieve(state: AgentState) -> dict:
     return {"chunks": hybrid_search(state["search_query"], top_k=5)}
 
@@ -104,7 +141,8 @@ def synthesize(state: AgentState) -> dict:
         {"role": "system", "content": SYNTHESIZER_PROMPT},
         {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {state['question']}"},
     ]
-    return {"answer": call_llm(role="synthesizer", messages=messages)}
+    answer = call_llm(role="synthesizer", messages=messages)
+    return {"answer": answer, "is_refusal": answer.strip().lower().startswith(REFUSAL_PREFIX)}
 
 
 def verify(state: AgentState) -> dict:
@@ -129,11 +167,11 @@ def rewrite_query(state: AgentState) -> dict:
 
 
 def route_after_classify(state: AgentState) -> str:
-    return "chitchat" if state["is_chitchat"] else "document"
+    return state["route_type"]
 
 
 def route_after_verify(state: AgentState) -> str:
-    if state["grounded"] or state["attempts"] >= state["max_attempts"]:
+    if state["is_refusal"] or state["grounded"] or state["attempts"] >= state["max_attempts"]:
         return "end"
     return "retry"
 
@@ -142,14 +180,20 @@ def build_graph():
     graph = StateGraph(AgentState)
     graph.add_node("route", route)
     graph.add_node("chitchat_reply", chitchat_reply)
+    graph.add_node("general_knowledge_reply", general_knowledge_reply)
     graph.add_node("retrieve", retrieve)
     graph.add_node("synthesize", synthesize)
     graph.add_node("verify", verify)
     graph.add_node("rewrite_query", rewrite_query)
 
     graph.add_edge(START, "route")
-    graph.add_conditional_edges("route", route_after_classify, {"chitchat": "chitchat_reply", "document": "retrieve"})
+    graph.add_conditional_edges(
+        "route",
+        route_after_classify,
+        {"chitchat": "chitchat_reply", "general_knowledge": "general_knowledge_reply", "document": "retrieve"},
+    )
     graph.add_edge("chitchat_reply", END)
+    graph.add_edge("general_knowledge_reply", END)
     graph.add_edge("retrieve", "synthesize")
     graph.add_edge("synthesize", "verify")
     graph.add_conditional_edges("verify", route_after_verify, {"end": END, "retry": "rewrite_query"})
@@ -164,9 +208,10 @@ def answer_question(question: str, max_attempts: int = 2) -> AgentState:
     initial_state: AgentState = {
         "question": question,
         "search_query": question,
-        "is_chitchat": False,
+        "route_type": "document",
         "chunks": [],
         "answer": "",
+        "is_refusal": False,
         "grounded": False,
         "verification_reason": "",
         "attempts": 0,

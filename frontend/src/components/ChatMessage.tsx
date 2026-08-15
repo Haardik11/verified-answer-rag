@@ -35,6 +35,26 @@ function GroundedBadge({ grounded, attempts }: { grounded: boolean; attempts: nu
   );
 }
 
+function GeneralKnowledgeBadge() {
+  return (
+    <motion.span
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
+      className="mt-3 inline-flex items-center gap-1 rounded-full bg-cream-dark px-2 py-0.5 text-[11px] font-medium text-ink-light"
+    >
+      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <path
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      General knowledge — not from your documents
+    </motion.span>
+  );
+}
+
 function ThinkingBubble() {
   return (
     <div className="flex items-center gap-1.5">
@@ -93,10 +113,13 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
     <motion.div {...bubbleMotion} className="flex justify-start">
       <div className="max-w-[80%] rounded-2xl rounded-bl-sm border border-line bg-card px-4 py-3 shadow-sm">
         <p className="text-[15px] leading-relaxed text-ink">{response.answer}</p>
-        {!response.is_chitchat && (
+        {response.route_type === "general_knowledge" && <GeneralKnowledgeBadge />}
+        {response.route_type === "document" && (
           <>
             <GroundedBadge grounded={response.grounded} attempts={response.attempts} />
-            <SourcesPanel sources={response.sources} question={message.question ?? ""} />
+            {!response.is_refusal && (
+              <SourcesPanel sources={response.sources} question={message.question ?? ""} />
+            )}
           </>
         )}
       </div>

@@ -39,7 +39,8 @@ class Source(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
-    is_chitchat: bool
+    route_type: str  # "document" | "chitchat" | "general_knowledge"
+    is_refusal: bool
     grounded: bool
     attempts: int
     verification_reason: str
@@ -56,7 +57,8 @@ def ask(request: AskRequest) -> AskResponse:
     result = answer_question(request.question)
     return AskResponse(
         answer=result["answer"],
-        is_chitchat=result["is_chitchat"],
+        route_type=result["route_type"],
+        is_refusal=result["is_refusal"],
         grounded=result["grounded"],
         attempts=result["attempts"],
         verification_reason=result["verification_reason"],

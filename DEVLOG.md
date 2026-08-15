@@ -351,3 +351,40 @@ the exact case that slipped through. Verified: both the CSK and 1+1
 questions now produce a one-sentence "I don't have that information."
 and pass immediately (`grounded=True, attempts=0`) instead of needing
 the verifier to catch and retry a bad first attempt.
+
+## 22. A third route: honestly-labeled general knowledge
+After step 21, "what is 1+1" correctly refused - but that raised a real
+design question: is flatly refusing trivial general knowledge actually
+the right behavior, or just annoying? The tempting fix (let the verifier
+be lenient about "obviously safe" general knowledge) was rejected - that
+would dilute what "Verified" means for every other answer, since the
+line between "safe to guess" and "risky ungrounded claim" is exactly the
+ambiguity this project exists to remove.
+
+The better fix: a third router category, `GENERAL_KNOWLEDGE`, alongside
+the existing `DOCUMENT_QUESTION`/`CHITCHAT` split. Router prompt updated
+to a 3-way classification; `route_type` (a string) replaces the old
+`is_chitchat` boolean throughout the state, API response, and frontend
+types, since a boolean couldn't represent three routes. Matching
+questions get answered directly and honestly badged in the UI as
+"General knowledge — not from your documents" (a neutral gray badge,
+distinct from green "Verified" and amber "Unverified") - `grounded` is
+explicitly `False` for these by design, since they genuinely aren't
+grounded in the indexed documents; the badge is what makes that honest
+rather than confusing.
+
+Also added `is_refusal` tracking (checks if the synthesizer's answer is
+the exact short refusal phrase) for two reasons: (1) the frontend now
+hides the sources panel entirely on a refusal, since retrieved-but-unused
+chunks aren't meaningful evidence for an "I don't know," and (2) the
+graph now skips the retry loop immediately on a refusal rather than
+spending 2 retries rewriting a query that was never going to find an
+answer that doesn't exist - a real efficiency win, relevant after
+today's Groq quota exhaustion from heavy testing.
+
+Verified 5 cases end to end: chitchat (no sources, friendly reply),
+general knowledge x2 (1+1 -> "2", CSK trophies -> a real fact, both
+honestly un-badged as unverified), a normal document question (unchanged
+behavior), and an out-of-scope-but-plausible business question
+(correctly stayed on the document path and refused honestly, sources now
+hidden).

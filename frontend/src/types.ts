@@ -5,9 +5,12 @@ export interface Source {
   text: string;
 }
 
+export type RouteType = "document" | "chitchat" | "general_knowledge";
+
 export interface AskResponse {
   answer: string;
-  is_chitchat: boolean;
+  route_type: RouteType;
+  is_refusal: boolean;
   grounded: boolean;
   attempts: number;
   verification_reason: string;
