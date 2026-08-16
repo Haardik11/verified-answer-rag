@@ -485,3 +485,35 @@ set - have not been scored yet, blocked purely by Groq free-tier daily
 quota, not by any code issue. Next session: keep resuming with
 `run_eval.py` until all 39 are scored, or consider the paid tier if
 waiting stays impractical.
+
+## 26. Spreadsheet ingestion, and a real BM25 tokenization bug it surfaced
+Started on the multimodal document router (still-open roadmap item):
+spreadsheets first, since unlike scanned-PDF OCR it needs no LLM calls
+and carries no quota risk. `load_spreadsheet()` in `app/ingestion/loaders.py`
+reads `.csv`/`.xlsx`/`.xls` via `pandas`, turning each row into a
+"Column: value, Column: value" line - readable prose for chunking, not a
+raw table dump. `load_document()`'s dispatcher now routes these
+extensions there. Added `data/sample_expenses.csv` (a monthly
+expense-by-department breakdown) as real test data and indexed it
+alongside the existing documents.
+
+Testing retrieval on it surfaced a genuine bug, not a spreadsheet-specific
+one: asking "How much was spent on marketing campaigns in August?" didn't
+return the CSV chunk in the top 3 results at all, despite it containing
+those exact words. Traced it to `app/retrieval/sparse.py`'s BM25
+tokenizer, which has used plain `.lower().split()` since it was first
+built - this leaves punctuation glued to words, so `"august,"` (from a
+comma-delimited CSV row) and `"august?"` (from a naturally-phrased
+question) are different tokens and never match. This was always a latent
+issue (flagged as a known simplification in `chunker.py`'s docstring
+early in the project) but never actually caused a visible problem until
+now, since spreadsheet rows are far more comma-dense than prose.
+
+Fixed by replacing the tokenizer with a regex that extracts only
+alphanumeric tokens (`re.findall(r"[a-z0-9]+", text.lower())`), applied
+consistently to both indexing and querying. Verified precisely: before
+the fix, BM25 ranked the CSV chunk 8th out of 13 for that query (score
+1.60); after the fix, it ranked 1st, more than double the next result
+(score 6.32, vs. 2.86). This is a real quality improvement to hybrid
+search generally, not just for spreadsheets - any query or document with
+different punctuation around shared words was affected.

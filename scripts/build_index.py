@@ -10,7 +10,13 @@ from app.ingestion.chunker import chunk_text
 from app.ingestion.loaders import load_document
 from app.retrieval.vector_store import add_chunks
 
-for path in ["data/sample.txt", "data/sample.pdf", "data/sample_large.txt", "data/sample_large.pdf"]:
+for path in [
+    "data/sample.txt",
+    "data/sample.pdf",
+    "data/sample_large.txt",
+    "data/sample_large.pdf",
+    "data/sample_expenses.csv",
+]:
     text = load_document(path)
     chunks = chunk_text(text, source=path)
     add_chunks(chunks)

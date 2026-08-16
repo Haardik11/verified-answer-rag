@@ -1,0 +1,15 @@
+Month,Category,Amount USD,Department
+July,Cloud Infrastructure,102000,Engineering
+July,Salaries,410000,Engineering
+July,Salaries,290000,Sales
+July,Marketing Campaigns,65000,Marketing
+August,Cloud Infrastructure,118000,Engineering
+August,Salaries,412000,Engineering
+August,Salaries,292000,Sales
+August,Marketing Campaigns,140000,Marketing
+August,Conference Sponsorship,80000,Marketing
+September,Cloud Infrastructure,120000,Engineering
+September,Salaries,415000,Engineering
+September,Salaries,295000,Sales
+September,Marketing Campaigns,58000,Marketing
+September,Office Equipment,22000,Operations
