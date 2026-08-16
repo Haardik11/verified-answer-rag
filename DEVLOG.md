@@ -441,3 +441,47 @@ first LLM call before failing on the actual network request, and all
 modules import cleanly with no errors - but a real end-to-end run with
 actual hallucination-rate numbers has not happened yet. That's the
 immediate next step once quota is available again.
+
+## 25. First real eval run: 9.1%, then expanded to a categorized 39-case set
+Once quota freed up, ran the 11-case harness for real for the first
+time: **9.1% hallucination rate (1/11)**. The one failure was itself
+informative, not a mystery: "What was Q2 revenue?" produced a live
+calculation from the stated year-over-year growth figure (4.2 / 1.12 =
+3.75 million) - the exact conflation-of-comparison-periods error
+investigated in step 19, just resurfacing on a different specific
+phrasing. 10/11 correct, including all 7 answerable questions and 3/4
+unanswerable ones handled correctly.
+
+Discussed whether 9.1% needed to be "improved" before it's usable - the
+conclusion: no. A suspiciously perfect 0% would look less credible in an
+interview than an honest number with one well-understood failure mode.
+The real gap was elsewhere: 11 cases is a small, mostly one-shaped test
+set (simple factual lookups). Redesigned `app/eval/cases.py` to 39 cases
+across 5 categories that each stress a different part of the pipeline:
+15 simple lookups, 10 paraphrased (same facts, deliberately different
+wording, to stress dense vs. BM25 retrieval differently), 5 multi-hop
+(answer requires combining facts from two different chunks or
+documents), 6 unanswerable/adversarial (the most important category for
+this project specifically), and 3 exact-figure lookups. `run_eval.py`
+now reports hallucination rate per category, not just one aggregate
+number, and every new fact was verified by re-reading all four source
+documents in full again, not assumed correct from memory.
+
+Also made the harness genuinely resumable: hitting the daily quota
+mid-run used to mean losing the whole run's results (or, after the step
+24 resilience fix, at least not crashing, but still re-spending tokens
+on already-answered questions on the next attempt). `run_eval.py` now
+reads any existing `eval_results.json`, skips questions already scored,
+and only spends new quota on cases not yet run, merging results into a
+cumulative report across multiple passes.
+
+Honest current status: across three separate attempts (including one on
+a fresh day, after the quota's rolling 24-hour window had time to
+partially recover), only **7 of the 39 cases have actually run** -
+`simple_lookup` questions only, 0% hallucination on all 7. The categories
+that matter most for proving this project's actual claim - paraphrased
+wording, multi-hop reasoning, and especially the unanswerable/adversarial
+set - have not been scored yet, blocked purely by Groq free-tier daily
+quota, not by any code issue. Next session: keep resuming with
+`run_eval.py` until all 39 are scored, or consider the paid tier if
+waiting stays impractical.

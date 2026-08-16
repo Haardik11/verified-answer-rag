@@ -1,0 +1,86 @@
+{
+  "timestamp": "2026-08-16T20:08:52.005707+00:00",
+  "total_cases_defined": 39,
+  "total_cases_scored": 7,
+  "hallucinated_count": 0,
+  "hallucination_rate_percent": 0.0,
+  "by_category": {
+    "simple_lookup": {
+      "total": 7,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    }
+  },
+  "cases": [
+    {
+      "question": "What was Q3 revenue?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Q3 revenue was 4.2 million dollars."
+    },
+    {
+      "question": "What is driving the operating expenses this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Operating expenses remained flat at 2.1 million dollars, driven mainly by headcount stability across engineering and sales teams."
+    },
+    {
+      "question": "Was there a security incident this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes, there was one severity-1 security incident that occurred in early September when a misconfigured access control rule briefly allowed a small subset of internal analytics dashboards to be reachable without authentication for approximately 40 minutes."
+    },
+    {
+      "question": "What was the enterprise revenue growth percentage?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The enterprise revenue grew 22 percent year over year."
+    },
+    {
+      "question": "How much was cloud infrastructure spend this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Cloud infrastructure spend for the quarter was $340,000."
+    },
+    {
+      "question": "What was net revenue retention this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Net revenue retention was 108 percent for the quarter."
+    },
+    {
+      "question": "How many total employees does the company have?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company has 142 employees."
+    }
+  ]
+}
