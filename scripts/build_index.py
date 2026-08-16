@@ -16,6 +16,7 @@ for path in [
     "data/sample_large.txt",
     "data/sample_large.pdf",
     "data/sample_expenses.csv",
+    "data/sample_scanned.pdf",
 ]:
     text = load_document(path)
     chunks = chunk_text(text, source=path)

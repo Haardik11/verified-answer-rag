@@ -517,3 +517,35 @@ the fix, BM25 ranked the CSV chunk 8th out of 13 for that query (score
 (score 6.32, vs. 2.86). This is a real quality improvement to hybrid
 search generally, not just for spreadsheets - any query or document with
 different punctuation around shared words was affected.
+
+## 27. Scanned-PDF OCR via a vision model
+The second half of the multimodal document router. Checked pricing first
+before building anything: neither Groq, OpenAI, nor Anthropic currently
+offer a free vision-capable model - Groq's (`qwen/qwen3.6-27b`, added to
+`ROLE_MODELS` as a new `vision_ocr` role) is a paid preview model, not
+covered by the free tier that every other role uses. Decided to proceed
+anyway with real (small) cost, since there's no free path to this
+feature with the providers already set up.
+
+`app/ingestion/vision.py` adds `ocr_image()`, sending a base64-encoded
+image through `call_llm(role="vision_ocr", ...)` using the same
+multimodal message format the OpenAI-compatible SDK already supports -
+no changes needed to `llm_router.py` itself, since it just passes
+`messages` through unchanged. `load_pdf()` in `loaders.py` now checks
+each page's extracted text length; pages under a small threshold (likely
+scanned, no real text layer) get rendered to an image via `pymupdf` and
+routed through OCR instead of pypdf's text extraction.
+
+Built a real test fixture rather than assuming it would work: rendered
+text onto an image with PIL, embedded it in a PDF with no text layer
+(confirmed via `pypdf` extracting exactly 0 characters from it - a
+genuine simulated scan, not just a normal PDF). First real OCR test
+succeeded and correctly transcribed the image's text, but surfaced a
+real bug: the configured model is a "thinking" model that prepended its
+raw chain-of-thought in `<think>...</think>` tags despite being
+explicitly told not to add commentary - if left in, that reasoning noise
+would have been chunked and indexed as if it were real document content.
+Fixed by stripping `<think>` blocks from the OCR output before returning
+it. Re-tested and confirmed clean output, then indexed the scanned PDF
+for real and verified retrieval finds it correctly (ranked #1 for a
+question about its content, ahead of every other document).

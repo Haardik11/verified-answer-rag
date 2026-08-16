@@ -31,4 +31,10 @@ ROLE_MODELS = {
     "query_rewrite": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
     "verifier": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
     "synthesizer": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
+
+    # Vision-capable, for OCR-ing scanned/image-only PDF pages that have no
+    # extractable text layer. This is a paid preview model on Groq (not
+    # covered by the free tier, unlike the text roles above) - used sparingly,
+    # only for pages actually detected as scanned.
+    "vision_ocr": ModelConfig(provider="groq", model="qwen/qwen3.6-27b"),
 }
