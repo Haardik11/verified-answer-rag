@@ -661,3 +661,40 @@ routes to the document path and honestly refuses, while the two genuine
 general-knowledge control cases (1+1, CSK trophies) still correctly
 route to `GENERAL_KNOWLEDGE` - confirming the fix was targeted, not an
 overcorrection that would misroute everything to document search.
+
+## 31. An honest gap: no baseline ablation existed before publishing "0%"
+A fair question had never actually been answered: had the same 39 cases
+ever been run *without* the verifier/retry loop, to show what it
+actually contributes versus asserting it matters? No - every eval run so
+far went through the full pipeline. Built one properly rather than
+assume: `build_graph()` and `answer_question()` in `graph.py` now take a
+`with_verification` flag; `False` compiles a genuinely smaller graph
+(route -> retrieve -> synthesize -> stop, no verify/retry nodes added at
+all) rather than simulating the absence some other way.
+`scripts/run_eval_baseline.py` mirrors `run_eval.py`'s resumable pattern
+against a separate `eval_results_baseline.json`, so it never touches the
+real results.
+
+Ran it: 9 of 39 cases completed before hitting the Groq quota wall again.
+One real difference surfaced: "Was there a security incident this
+quarter?" answered incompletely without verification (missing the
+40-minute duration) but completely with it. Important honesty check
+before treating that as proof: the with-verification run shows
+`attempts: 0` - the verifier approved that answer on the first try, no
+retry ever fired. Since the corrective-retry mechanism wasn't actually
+exercised for this case, the completeness difference could be ordinary
+sampling variance between two independent API calls (temperature > 0),
+not a proven causal effect of verification. One suggestive data point
+is not the same as a real ablation result.
+
+Honest current status: the baseline is real infrastructure with real
+partial data, not yet a complete comparison (30 of 39 cases still
+pending, and zero cases so far where a retry was actually triggered and
+demonstrably fixed something). Any claim that the verifier *causes* the
+measured hallucination rate should wait until this is finished - the
+mechanism and the measured outcome are currently two separately-true
+facts, not a proven cause and effect. Resume with
+`scripts/run_eval_baseline.py` once quota allows, ideally watching
+specifically for a case where `attempts > 0` in the full-pipeline run to
+get real evidence of the retry mechanism itself mattering, not just the
+verifier's first-pass judgment.

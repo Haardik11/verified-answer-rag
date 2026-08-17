@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-08-17T11:33:40.723944+00:00",
+  "condition": "verification_disabled_baseline",
+  "total_cases_defined": 39,
+  "total_cases_scored": 9,
+  "hallucinated_count": 1,
+  "hallucination_rate_percent": 11.1,
+  "by_category": {
+    "simple_lookup": {
+      "total": 9,
+      "hallucinated": 1,
+      "rate_percent": 11.1
+    }
+  },
+  "cases": [
+    {
+      "question": "What was Q3 revenue?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Q3 revenue was\u202f4.2\u202fmillion\u202fdollars."
+    },
+    {
+      "question": "What is driving the operating expenses this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Operating expenses are being driven primarily by headcount stability across the engineering and sales teams."
+    },
+    {
+      "question": "Was there a security incident this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": true,
+      "failure_reason": "Missing expected fact(s): ['40 minutes']",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes, there was a severity\u20111 security incident in early September."
+    },
+    {
+      "question": "What was the enterprise revenue growth percentage?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The enterprise revenue grew by 22\u202fpercent."
+    },
+    {
+      "question": "How much was cloud infrastructure spend this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The cloud infrastructure spend for the quarter was\u202f$340,000."
+    },
+    {
+      "question": "What was net revenue retention this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The net revenue retention for the quarter was 108\u202fpercent."
+    },
+    {
+      "question": "How many total employees does the company have?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company has a total of 142 employees."
+    },
+    {
+      "question": "What was SMB revenue this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The SMB revenue for the quarter was\u202f$1.3\u202fmillion."
+    },
+    {
+      "question": "What was self-serve revenue this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Self\u2011serve revenue this quarter was\u202f$800,000."
+    }
+  ]
+}

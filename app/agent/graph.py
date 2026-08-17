@@ -184,15 +184,21 @@ def route_after_verify(state: AgentState) -> str:
     return "retry"
 
 
-def build_graph():
+def build_graph(with_verification: bool = True):
+    """
+    with_verification=False builds the bare baseline (route -> retrieve ->
+    synthesize -> stop, no verify, no retry) - a real ablation for
+    measuring what the verifier/self-correction loop actually contributes,
+    not a simulation of it. Same route/retrieve/synthesize nodes either
+    way, so the only difference is whether the self-check-and-retry step
+    exists at all.
+    """
     graph = StateGraph(AgentState)
     graph.add_node("route", route)
     graph.add_node("chitchat_reply", chitchat_reply)
     graph.add_node("general_knowledge_reply", general_knowledge_reply)
     graph.add_node("retrieve", retrieve)
     graph.add_node("synthesize", synthesize)
-    graph.add_node("verify", verify)
-    graph.add_node("rewrite_query", rewrite_query)
 
     graph.add_edge(START, "route")
     graph.add_conditional_edges(
@@ -203,16 +209,24 @@ def build_graph():
     graph.add_edge("chitchat_reply", END)
     graph.add_edge("general_knowledge_reply", END)
     graph.add_edge("retrieve", "synthesize")
-    graph.add_edge("synthesize", "verify")
-    graph.add_conditional_edges("verify", route_after_verify, {"end": END, "retry": "rewrite_query"})
-    graph.add_edge("rewrite_query", "retrieve")
+
+    if with_verification:
+        graph.add_node("verify", verify)
+        graph.add_node("rewrite_query", rewrite_query)
+        graph.add_edge("synthesize", "verify")
+        graph.add_conditional_edges("verify", route_after_verify, {"end": END, "retry": "rewrite_query"})
+        graph.add_edge("rewrite_query", "retrieve")
+    else:
+        graph.add_edge("synthesize", END)
 
     return graph.compile()
 
 
-def answer_question(question: str, max_attempts: int = 2) -> AgentState:
-    """Run the full self-correcting loop for a single question."""
-    app = build_graph()
+def answer_question(question: str, max_attempts: int = 2, with_verification: bool = True) -> AgentState:
+    """Run the self-correcting loop for a single question. Set
+    with_verification=False to run the bare baseline instead, for
+    measuring the verifier's real contribution via ablation."""
+    app = build_graph(with_verification=with_verification)
     initial_state: AgentState = {
         "question": question,
         "search_query": question,
