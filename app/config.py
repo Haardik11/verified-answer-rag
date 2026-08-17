@@ -6,7 +6,7 @@ Change any of these to swap providers without touching any pipeline code.
 "openai"    -> paid API. Good for roles that need real judgment (verifier).
 "anthropic" -> paid API. Same idea, different provider.
 "groq"      -> paid API (OpenAI-compatible). Hosts larger open-weight models
-               (e.g. Llama 3.3 70B) - used for verifier and synthesizer, since
+               (e.g. GPT-OSS 120B) - used for verifier and synthesizer, since
                the free local 3B model wasn't reliably self-consistent at
                judging whether an answer is grounded, and also tended to
                paraphrase source citations incorrectly in its written answers
@@ -27,10 +27,12 @@ ROLE_MODELS = {
     "extractor": ModelConfig(provider="ollama", model="llama3.2"),
 
     # Actually used roles - all on Groq, so no local Ollama server is required to run this project.
-    "router": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
-    "query_rewrite": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
-    "verifier": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
-    "synthesizer": ModelConfig(provider="groq", model="llama-3.3-70b-versatile"),
+    # Groq deprecated llama-3.3-70b-versatile on 2026-08-16; openai/gpt-oss-120b
+    # is its official recommended successor, also free-tier (see DEVLOG.md).
+    "router": ModelConfig(provider="groq", model="openai/gpt-oss-120b"),
+    "query_rewrite": ModelConfig(provider="groq", model="openai/gpt-oss-120b"),
+    "verifier": ModelConfig(provider="groq", model="openai/gpt-oss-120b"),
+    "synthesizer": ModelConfig(provider="groq", model="openai/gpt-oss-120b"),
 
     # Vision-capable, for OCR-ing scanned/image-only PDF pages that have no
     # extractable text layer. This is a paid preview model on Groq (not

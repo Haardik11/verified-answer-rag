@@ -549,3 +549,24 @@ Fixed by stripping `<think>` blocks from the OCR output before returning
 it. Re-tested and confirmed clean output, then indexed the scanned PDF
 for real and verified retrieval finds it correctly (ranked #1 for a
 question about its content, ahead of every other document).
+
+## 28. Groq deprecated our text model out from under us
+Trying to resume the eval harness, every call started failing with
+`model_not_found` instead of the familiar rate-limit error - a
+genuinely different problem, not more quota exhaustion. Investigated
+properly instead of guessing: Groq deprecated `llama-3.3-70b-versatile`
+(the model `router`, `query_rewrite`, `verifier`, and `synthesizer` had
+all been using since step 13) on 2026-08-16 - literally the day before
+this was caught. Their official recommended successor is
+`openai/gpt-oss-120b`, also free-tier, and notably with a much higher
+daily token quota (~200K vs. the 100K that caused most of today's
+friction).
+
+Updated all four roles in `ROLE_MODELS` to the new model. Verified in two
+steps before trusting it: a raw `call_llm` call succeeded, then a full
+`answer_question()` run through the entire graph (route -> retrieve ->
+synthesize -> verify) also succeeded with a correct, grounded answer.
+Worth remembering going forward: a hosted provider's free/available
+models can change without the code changing at all - a sudden
+`model_not_found` after something worked reliably for hours is a sign to
+check for a provider-side deprecation, not just assume the code broke.
