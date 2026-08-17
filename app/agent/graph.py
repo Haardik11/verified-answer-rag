@@ -1,25 +1,19 @@
 """
-The self-correcting RAG loop: route -> retrieve -> synthesize -> verify, and
-if the verifier says the answer isn't grounded in the retrieved context,
-rewrite the search query and try again (bounded by max_attempts so it can't
-loop forever). This is the Corrective RAG / Self-RAG pattern - the thing
-that differentiates this project from a basic retrieve-then-generate
-chatbot.
+The self-correcting loop: route -> retrieve -> synthesize -> verify. If the
+verifier says the answer isn't grounded, rewrite the search query and try
+again (capped by max_attempts). Corrective RAG / Self-RAG pattern - this is
+the whole reason this project isn't just another retrieve-then-generate
+chatbot. See DEVLOG.md for the actual bug that made me build it: a test run
+gave a correct fact but attributed it to the wrong source, and the plain
+retrieve->synthesize loop had no way to catch that.
 
-See DEVLOG.md for why this exists: a real test run produced a correct fact
-attributed to the wrong source, and the plain retrieve->synthesize loop had
-no way to catch that. This graph is what catches it.
-
-The routing step exists because a real test asking a plain greeting ("hi")
-still ran full retrieval and showed 5 unrelated source chunks marked
-"Verified" - retrieval and verification only make sense for actual
-questions about the documents, not conversational messages. The third
-route (general knowledge) exists for the same reason a strict refusal for
-something like "what is 1+1" felt wrong: the fix isn't to let the verifier
-be lenient about ungrounded answers (that would dilute what "Verified"
-means for everything else) - it's to honestly label an answer as *not*
-grounded in the documents rather than either refusing pointlessly or
-falsely calling it "Verified".
+Routing exists because I typed "hi" into the chat once and it still ran
+full retrieval and showed me 5 unrelated chunks marked "Verified." The
+general-knowledge route exists because flatly refusing something like
+"what is 1+1" felt dumb, but I didn't want to just let the verifier go easy
+on ungrounded answers (that ruins what "Verified" means everywhere else) -
+so instead it honestly labels the answer as not-from-your-documents rather
+than pretending either way.
 """
 
 from typing import TypedDict

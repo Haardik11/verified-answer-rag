@@ -1,700 +1,567 @@
 # VerifiedRAG — Development Log
 
-A plain-English record of each build step: what was built, why, and how it
-was verified. Written to be read back once the project is done, as a
-refresher for explaining the project (e.g. in an interview).
+Notes to myself as I build this, so I don't forget why I made a decision
+or how I found/fixed a bug. Mostly useful for when I have to explain this
+project later (interview, whatever) and want the real story instead of a
+vague "yeah it works."
 
 ## 1. Project scaffolding
-`.gitignore`, `README.md`, `requirements.txt`, `.env.example`. No code yet
-— just the basic setup every repo needs.
+`.gitignore`, `README.md`, `requirements.txt`, `.env.example`. No code
+yet, just the basic setup every repo needs before I touch anything real.
 
 ## 2. Model abstraction layer
 `app/config.py` + `app/models/llm_router.py`. Every agent calls one
 function, `call_llm(role, messages)`, and a config dict decides which
-actual provider (Ollama locally, or OpenAI/Anthropic) handles that role.
-Swapping a model later is a one-line config change, not a code change.
+provider (Ollama locally, or OpenAI/Anthropic) actually handles that
+role. I wanted swapping a model later to be a one-line config change,
+not a code change — turned out to matter a lot more than I expected
+(see step 13, 28).
 
 ## 3. Document ingestion
 `app/ingestion/loaders.py` (PDF/text → plain string) and `chunker.py`
 (splits text into overlapping word-window chunks, so an answer that
 straddles a chunk boundary doesn't get cut in half). Tested via
 `scripts/test_ingestion.py` against `data/sample.txt` and `data/sample.pdf`
-(two short Q3 financial documents used as sample data throughout).
+(two short Q3 financial docs I made up as sample data, used everywhere
+below).
 
 ## 4. Dense embeddings
-`app/retrieval/embeddings.py` wraps `fastembed` (ONNX-based, not torch —
-smaller footprint for eventual Docker deployment) using the
-`BAAI/bge-small-en-v1.5` model. Converts text into 384-number vectors that
-represent meaning, so semantically similar text ends up numerically close.
-Smoke-tested by embedding sample strings and checking the output shape.
+`app/retrieval/embeddings.py` wraps `fastembed` (ONNX, not torch —
+smaller footprint, I was thinking ahead to Docker) using
+`BAAI/bge-small-en-v1.5`. Turns text into 384-number vectors so
+semantically similar text ends up numerically close. Smoke-tested by
+embedding a couple of sample strings and checking the output shape.
 
 ## 5. Vector store (dense/semantic search)
-`app/retrieval/vector_store.py` wraps **Qdrant** running in local embedded
-mode (`QdrantClient(path=...)` — no separate server process). `add_chunks()`
-embeds and stores chunks; `dense_search()` embeds a query and returns the
-closest matches by cosine similarity. Originally planned as ChromaDB, swapped
-to Qdrant mid-build for its embedded mode and native fastembed pairing.
-Verified with a 3-sentence test set: a query about the Eiffel Tower
-correctly ranked the Eiffel Tower sentence highest.
+`app/retrieval/vector_store.py` wraps **Qdrant** in local embedded mode
+(`QdrantClient(path=...)`, no separate server). `add_chunks()` embeds and
+stores; `dense_search()` embeds a query and returns nearest matches by
+cosine similarity. I originally planned to use ChromaDB but swapped to
+Qdrant mid-build for the embedded mode and the fastembed pairing. Tested
+with a tiny 3-sentence set — a query about the Eiffel Tower correctly
+ranked the Eiffel Tower sentence top.
 
 ## 6. Sparse search (BM25 keyword search)
-`app/retrieval/sparse.py` implements classic keyword-based ranking (no AI
-involved), rebuilding its index in memory from whatever's in Qdrant rather
-than keeping a second copy of the documents. Verified: a "Python
-programming language" query correctly ranked the Python sentence highest
-by literal word overlap.
+`app/retrieval/sparse.py`, classic keyword ranking, no AI involved. It
+rebuilds its index in memory from whatever's already in Qdrant instead
+of keeping a second copy of the documents around. Tested with a "Python
+programming language" query, which correctly ranked the Python sentence
+top by literal word overlap.
 
 ## 7. Hybrid search (RRF fusion)
-`app/retrieval/hybrid.py` combines dense and BM25 rankings using
-Reciprocal Rank Fusion (merges by rank position, since cosine similarity
-and BM25 scores aren't on comparable scales). `hybrid_search()` is the one
-function the rest of the project calls for retrieval.
+`app/retrieval/hybrid.py` combines dense + BM25 rankings using
+Reciprocal Rank Fusion — merges by rank position rather than raw score,
+since cosine similarity and BM25 scores aren't comparable numbers.
+`hybrid_search()` is the one function I call for retrieval everywhere
+else in the project.
 
 ## 8. Real end-to-end retrieval test
-`scripts/build_index.py` (loads + chunks + embeds + stores the real sample
-docs) and `scripts/test_hybrid.py` (runs real questions through
-`hybrid_search`). Confirmed retrieval correctly discriminates between
-sources: "risk factors" and "operating expenses" questions correctly
-ranked the PDF higher (that content only exists there); "SMB segment"
-correctly ranked the `.txt` file higher; "What was Q3 revenue?" came back
-a near-tie, correctly, since both documents state that fact.
+`scripts/build_index.py` and `scripts/test_hybrid.py`. Ran real
+questions through `hybrid_search()` against the two sample docs and
+checked the results actually made sense: "risk factors" and "operating
+expenses" questions correctly ranked the PDF higher (that content's only
+in there); "SMB segment" ranked the `.txt` file higher; "What was Q3
+revenue?" came back a near-tie, which is correct since both files state
+that fact.
 
-## 9. LangGraph retrieve → synthesize agent (baseline RAG loop)
+## 9. LangGraph retrieve → synthesize agent (baseline loop)
 `app/agent/graph.py` wires `hybrid_search()` and
-`call_llm(role="synthesizer", ...)` into a two-node LangGraph:
-`retrieve → synthesize`. This is deliberately the simplest working
-version — no verification yet. Required installing `langgraph` (pulls in
-`langchain-core` as a small dependency, but not the broader LangChain
-framework) and getting Ollama running locally with the `llama3.2` model
-pulled (a mismatch with an older `llama3` pull had to be fixed first).
+`call_llm(role="synthesizer", ...)` into a two-node graph: retrieve →
+synthesize. Kept it deliberately dumb for now, no verification yet.
+Had to install `langgraph` (it pulls in `langchain-core`, but not the
+full LangChain framework) and get Ollama running locally with `llama3.2`
+pulled — wasted a bit of time on a mismatch with an older `llama3` pull
+I already had.
 
-Verified twice with real questions against the real index:
+Tested with two real questions:
 - "What was Q3 revenue...?" → correct, grounded answer.
-- "What is driving operating expenses...?" → facts were correct, but the
-  answer **mislabeled which source the claim came from** (said "the text
-  file" when the sentence was actually from the PDF). This wasn't a bug in
-  the code — retrieval pulled the right chunks — it was the LLM being
-  loosely accurate rather than strictly grounded. This is a live example
-  of exactly the failure mode the next step is meant to catch.
+- "What is driving operating expenses...?" → the facts were right, but
+  it said "the text file" when that sentence was actually from the PDF.
+  Not a retrieval bug — it pulled the right chunks — the model was just
+  being loosely accurate instead of strictly grounded. This is basically
+  a live demo of the exact problem I'm about to build a fix for.
 
 ## 10. Verifier / self-correction loop
-The actual differentiator. `app/agent/verify.py` adds a separate LLM call
-(role=`"verifier"`) that judges whether a synthesized answer is genuinely
-supported by the retrieved context - tested standalone first against the
-real "correct facts, wrong source" case from step 9, and it correctly
-told the two apart (`grounded: True` vs `grounded: False`).
+The actual point of this whole project. `app/agent/verify.py` adds a
+separate LLM call (role `"verifier"`) that judges whether a synthesized
+answer is genuinely backed by the retrieved context. Tested it standalone
+first against the real "right facts, wrong source" case from step 9, and
+it correctly told the two apart (`grounded: True` vs `False`).
 
-`app/agent/graph.py` was then rewired into the full self-correcting loop:
-`retrieve -> synthesize -> verify`, with a conditional branch - if not
-grounded, `rewrite_query` (a new LLM call, role=`"query_rewrite"`)
-rephrases the search query and the loop retries, bounded by
-`max_attempts` so it can't run forever.
+Rewired `graph.py` into the full loop: retrieve → synthesize → verify,
+with a branch — if not grounded, `rewrite_query` (new LLM call, role
+`"query_rewrite"`) rephrases the search and it retries, capped by
+`max_attempts` so it can't loop forever.
 
-Verified two real behaviors:
-- **Easy question** ("What was Q3 revenue?"): passed verification on the
-  first attempt, 0 retries - confirms the loop doesn't retry
-  unnecessarily when the answer is already well-grounded.
-- **Hard question** ("What is driving the operating expenses this
-  quarter?"): failed verification on all 3 attempts (hit `max_attempts`),
-  and correctly returned the best-effort answer with `grounded: False`
-  clearly flagged, instead of silently pretending it succeeded. Streaming
-  the graph's steps showed the verifier's rejection reason was somewhat
-  pedantic each time ("a factor" vs. "the main reason") rather than
-  catching the actual source-mislabeling bug from step 9 - a real,
-  honest finding: the retry *mechanism* is sound, but judgment quality is
-  bounded by the model doing the verifying. This is exactly why
-  `ROLE_MODELS` in `app/config.py` allows swapping a stronger model (e.g.
-  GPT-4o) into just the `verifier` role later without touching any
-  pipeline code - a natural next experiment once API keys are added.
+Checked two behaviors:
+- Easy question ("What was Q3 revenue?"): passed on the first try, 0
+  retries — good, it's not retrying when it doesn't need to.
+- Hard question ("What is driving operating expenses...?"): failed all 3
+  attempts, hit the cap, and correctly returned the best-effort answer
+  flagged `grounded: False` instead of pretending it worked. Watching the
+  steps stream by, the verifier's rejection reason was kind of nitpicky
+  each time ("a factor" vs "the main reason") rather than catching the
+  actual source-mislabeling bug from step 9. Honestly a useful thing to
+  find: the retry mechanism works, but it's only as good as the judgment
+  of whatever model is doing the verifying. Which is exactly why I built
+  `ROLE_MODELS` to let me swap a stronger model into just the `verifier`
+  role later — I knew I'd need this.
 
 ## 11. FastAPI backend
-`app/main.py` wraps the agent in a real web API - one endpoint,
-`POST /ask`, that takes a question and returns the answer, its sources
-(with scores), and the verification status (`grounded`, `attempts`,
-`verification_reason`), so a future frontend can show the user not just
-an answer but how confident the system is in it. Also exposes `/health`
-and (free from FastAPI) interactive docs at `/docs`.
+`app/main.py` — one endpoint, `POST /ask`, takes a question and returns
+the answer plus sources and verification status (`grounded`, `attempts`,
+`verification_reason`) so a future frontend can show not just an answer
+but how sure the system actually is. Also `/health` and free interactive
+docs at `/docs` (nice FastAPI perk).
 
-Verified for real: started the server with `uvicorn app.main:app`, sent an
-actual HTTP POST to `/ask`, and got back the correct grounded answer with
-full source chunks as JSON - the same result as calling `answer_question()`
-directly in Python, now reachable over HTTP.
+Tested for real: started the server, sent an actual HTTP POST to `/ask`,
+got back the correct grounded answer with full source chunks as JSON —
+same result as calling `answer_question()` directly in Python, now
+reachable over HTTP.
 
 ## 12. Manual testing via /docs, and hardening the verifier
-Tried the API by hand through FastAPI's auto-generated `/docs` page and
-found two real problems worth fixing:
+Poked at the API by hand through `/docs` and found two real problems.
 
-1. **Honest refusals were wrongly punished.** Asked "What was Q2 revenue?"
-   (neither document mentions Q2 at all). The synthesizer correctly said
-   "I don't know" every time - no hallucination - but the verifier still
-   marked it `NOT_GROUNDED`, because the original prompt only asked "is
-   every claim supported," and a refusal doesn't cleanly fit that framing.
-   Fixed by explicitly telling the verifier prompt that an honest "the
-   context doesn't say" is always a pass. Confirmed fixed: re-ran the same
-   question, got `grounded: True` on the first attempt.
+**Honest refusals were being wrongly punished.** Asked "What was Q2
+revenue?" (neither doc mentions Q2 at all). The synthesizer correctly
+said "I don't know" — no hallucination — but the verifier still marked
+it `NOT_GROUNDED`, because my original prompt only asked "is every claim
+supported" and a refusal doesn't cleanly fit that framing. Fixed by
+telling the verifier explicitly that an honest "the context doesn't say"
+is always a pass. Re-ran the same question and got `grounded: True` on
+the first try.
 
-2. **The verifier sometimes wrote a verdict that contradicted its own
-   stated reason** (e.g. writing a reason that clearly described a pass,
-   then outputting `NOT_GROUNDED` anyway). Root cause: the prompt asked
-   for `VERDICT` before `REASON`, so the model committed to a conclusion
-   before actually reasoning through it. Fixed by reordering the prompt to
-   require reasoning first, verdict last, so the verdict is generated
-   *after* (and conditioned on) the written-out reasoning. Confirmed
-   fixed for the general case: ran the same good/bad test 3 times back to
-   back with `temperature=0.0` and got identical, self-consistent results
-   every time.
+**The verifier sometimes contradicted itself** — writing a reason that
+clearly described a pass, then outputting `NOT_GROUNDED` anyway. Turned
+out my prompt asked for `VERDICT` before `REASON`, so the model was
+committing to a conclusion before it had actually reasoned through
+anything. Reordered it so reasoning comes first and the verdict follows
+from it. Ran the same good/bad test 3 times at `temperature=0.0` and got
+identical, self-consistent results every time.
 
-Also reconsidered what "grounded" should even mean: the original prompt
-treated citing the wrong specific document (e.g. "the text file" when a
-fact was actually in the PDF) as a failure, on the theory that it was
-close to the source-mislabeling bug found in step 9. On reflection, that
-conflates two different things - **hallucination** (stating something not
-actually supported by any of the retrieved documents) versus **citation
-accuracy** (correctly saying which specific document a true fact came
-from). Only the first one is what the project's hallucination-rate goal
-actually cares about. Reworded the prompt to explicitly stop penalizing
-correct-fact/wrong-file-label answers, focusing purely on whether facts
-are real and unfabricated.
+Also rethought what "grounded" should even mean. My original prompt
+treated citing the wrong document (e.g. "the text file" when it was
+really the PDF) as a failure, since it felt close to the step 9 bug. On
+reflection that's conflating two different things — hallucination
+(stating something not actually in any retrieved doc) vs. citation
+accuracy (naming the right specific source for a true fact). Only the
+first one is what I actually care about for a hallucination-rate metric.
+Reworded the prompt to stop penalizing correct-fact/wrong-file-label
+answers and focus purely on whether facts are real.
 
-**Honest remaining limitation:** even after both fixes, a follow-up test
-still caught the verifier giving `NOT_GROUNDED` to a correct-fact
-wrong-file-label answer, with a reason that itself described a pass. So
-the verdict/reason self-contradiction problem is *reduced*, not
-eliminated. Genuinely fabricated facts, however, were caught reliably and
-correctly in every test run tonight (e.g. an invented "50% increase due
-to a new office lease" was correctly rejected with an accurate reason).
-Conclusion: this is a capability ceiling of `llama3.2` (a small, free,
-local ~3B-parameter model used for cost-free development, per
-`app/config.py`) doing nuanced self-consistent judgment, not something
-further prompt tweaking is likely to fully solve. The documented next
-step is unchanged from step 10: swap `ROLE_MODELS["verifier"]` to a
-stronger model (e.g. GPT-4o) once API keys are added - no pipeline code
-changes required, by design.
+**Still not fully fixed, and I want to be honest about that.** Even
+after both changes, a follow-up test caught the verifier still marking a
+correct-fact/wrong-file-label answer `NOT_GROUNDED`, with a reason that
+itself described a pass. So the self-contradiction thing is reduced, not
+gone. Actual made-up facts, though, got caught reliably every time (e.g.
+an invented "50% increase due to a new office lease" was correctly
+rejected with an accurate reason). My read: this is a capability ceiling
+of `llama3.2` (a small free local ~3B model) doing this kind of
+self-consistent judgment, not something more prompt tweaking is going to
+fix. Sticking with the plan from step 10 — swap `ROLE_MODELS["verifier"]`
+to something stronger once I have API keys.
 
 ## 13. Swapping the verifier to a stronger model (Groq)
-Followed through on the plan from step 12: added Groq as a fourth
-provider in `app/models/llm_router.py`. Groq's API is OpenAI-compatible,
-so this reused the existing `openai` SDK (already a dependency) pointed
-at Groq's endpoint instead of writing a new integration - no new pip
-package needed. Also fixed a real, separate gap found along the way:
-`python-dotenv` had been listed in `requirements.txt` since the very
-first commit but nothing ever actually called `load_dotenv()`, so keys
-in `.env` were silently never being read. Added that call to
-`llm_router.py`.
+Added Groq as a fourth provider in `llm_router.py`. Groq's API is
+OpenAI-compatible so I just pointed the existing `openai` SDK at their
+endpoint instead of writing a whole new integration. Also caught a real
+gap while I was in there: `python-dotenv` had been sitting in
+`requirements.txt` since my very first commit, but nothing ever actually
+called `load_dotenv()` — my `.env` keys were silently never being read.
+Fixed that too.
 
-`ROLE_MODELS["verifier"]` in `app/config.py` now points at
-`llama-3.3-70b-versatile` via Groq (a 70-billion-parameter model) instead
-of the local 3B `llama3.2` - `synthesizer` and other roles stay on free
-local Ollama, since the consistency problem was specific to the judgment
-task, not generation.
+`ROLE_MODELS["verifier"]` now points at `llama-3.3-70b-versatile` via
+Groq instead of local `llama3.2` — kept `synthesizer` on free Ollama
+since the consistency problem was specific to judgment, not generation.
 
-Re-ran the exact same 3-case test from step 12 (good answer, correct-fact
-wrong-source-label answer, genuinely fabricated fact) 3 times back to
-back. Every single run, every case, came back correct **and**
-self-consistent - the reasoning always matched the verdict, including
-the mislabeled-source case explicitly being described as "a minor
-labeling slip" rather than a failure, exactly matching the intended
-definition of "grounded." Zero contradictions across 9 total
-verdict/reason pairs, versus the recurring inconsistencies seen with the
-3B model in step 12. Confirms the hypothesis: this was a small-model
-capability ceiling, not a flaw in the verification approach itself -
-solved by scaling up the model for just this one role, exactly the
-tradeoff `ROLE_MODELS` was designed to make easy.
+Re-ran the same 3-case test from step 12 (good / wrong-source / made-up)
+3 times back to back. Every run, every case, correct **and**
+self-consistent — the reasoning matched the verdict every time, even
+correctly calling the mislabeled-source case "a minor labeling slip"
+instead of a failure. Zero contradictions across 9 verdict/reason pairs.
+Confirms my theory from step 12 — small-model capability ceiling, not a
+flaw in the approach.
 
 ## 14. Fixing citation accuracy in the written answer
-Separate from the verifier's internal judgment, the *synthesizer's own
-written answer text* still had the original step-9 bug: it would say
-"the text file" or "the PDF" in prose, sometimes incorrectly, even though
-the underlying fact was true and the retrieval metadata itself was always
-accurate (`RetrievedChunk.source` never lies - only the AI's narration
-about it could be wrong).
+Separate from the verifier's own judgment, the synthesizer's actual
+written text still had the step-9 bug — it would say "the text file" or
+"the PDF" in prose, sometimes wrong, even though the underlying fact was
+true and the retrieval metadata itself never lies about where a chunk
+came from.
 
-Two changes: (1) `SYNTHESIZER_PROMPT` in `app/agent/graph.py` now
-explicitly tells the model that each context chunk is labeled with an
-exact bracketed source (e.g. `[data/sample.pdf#0]`), and to cite that
-literal label instead of paraphrasing a source name from memory. (2)
-`ROLE_MODELS["synthesizer"]` also switched from local `llama3.2` to the
-same Groq 70B model now used for `verifier`.
+Two changes: told `SYNTHESIZER_PROMPT` that each chunk is labeled with an
+exact bracketed source (e.g. `[data/sample.pdf#0]`) and to cite that
+literal label instead of guessing a source name from memory; switched
+`synthesizer` to the same Groq model now used for `verifier`.
 
-Re-ran the exact question that originally exposed this bug ("What is
-driving the operating expenses this quarter?") 3 times. Every run
-produced the identical, correct answer, literally citing
-`[data/sample.pdf#0]` instead of guessing "text file" - the original bug
-is fixed, with the exact real-world case that found it used as the
-regression test.
+Re-ran the exact question that exposed this bug ("What is driving the
+operating expenses this quarter?") 3 times. Every run, identical correct
+answer, literally citing `[data/sample.pdf#0]` — bug's fixed, and I used
+the real case that found it as my regression test.
 
 ## 15. Re-enabling strict citation checking in the verifier
-With the root cause fixed at the source (step 14) and both `verifier` and
-`synthesizer` now on the stronger Groq model, re-enabled the citation
-accuracy check in `VERIFIER_PROMPT` that had been relaxed back in step
-12. The verifier now checks two things again: hallucination (is every
-fact actually supported by the context) and citation accuracy (is a fact
-attributed to the correct specific source) - both are real correctness
-issues, and the earlier relaxation was a workaround for a weak model that
-kept getting citation checking itself wrong, not a permanent design
-decision.
+With the root cause fixed and both roles on the stronger model,
+re-enabled the citation check I'd relaxed in step 12. Now checking two
+things again: hallucination and citation accuracy, both legit concerns —
+the earlier relaxation was a workaround for a weak model, not a real
+design decision.
 
-Re-ran the same 3-case test (good, mislabeled-source, hallucinated) 3
-times. Every run correctly returned `True`, `False`, `False` with
-accurate, self-consistent reasoning each time (e.g. explicitly naming
-"the PDF, not the text file" as the correct source for the mislabeled
-case) - the stronger model handles the stricter check reliably, closing
-the loop: the verifier is now both a hallucination check and a citation
-check, backing up the synthesizer's now-accurate citations as a safety
-net rather than a single point of failure.
+Re-ran the same 3-case test 3 times. Every run: `True`, `False`, `False`,
+consistent reasoning, explicitly naming "the PDF, not the text file" for
+the mislabeled case. The stronger model handles the stricter check fine.
 
 ## 16. React frontend
-Built the first real UI: `frontend/` (Vite + React + TypeScript +
-Tailwind), a chat interface calling the FastAPI `/ask` endpoint. Includes
-a message list with user/assistant bubbles, a "Verified"/"Unverified"
-badge reflecting the real `grounded` field, a collapsible sources panel,
-and a relevant-excerpt highlighter (`lib/excerpt.ts`) that finds the
-best-matching sentence within a source chunk by keyword overlap instead
-of showing an arbitrary text cutoff. Later extended with a ChatGPT-style
-sidebar (multiple chats, persisted to `localStorage`, create/delete) and
-a full visual redesign to a warm, Claude.ai-inspired palette with
-`framer-motion` animations throughout (message entrances, sidebar
-list/delete transitions, sources panel accordion expand) after initial
-feedback that the first dark-theme version felt flat and generic.
+Built the actual UI: `frontend/` (Vite + React + TypeScript + Tailwind).
+Chat interface hitting `/ask`. Message bubbles, a Verified/Unverified
+badge tied to the real `grounded` field, a collapsible sources panel, and
+a relevant-excerpt highlighter (`lib/excerpt.ts`) that finds the
+best-matching sentence in a chunk by keyword overlap instead of just
+cutting off text arbitrarily. Later added a ChatGPT-style sidebar
+(multiple chats, saved to `localStorage`) and redid the whole visual
+style — warm Claude.ai-ish palette with `framer-motion` animations —
+after the first dark-theme pass felt flat.
 
 ## 17. Larger sample documents
 Added `data/sample_large.txt` and `data/sample_large.pdf` (~900 words
-each, multiple distinct sections) since the original 2 samples were too
-short to produce more than 1 chunk each, meaning retrieval had nothing to
-meaningfully narrow down between. Verified real narrowing behavior: e.g.
-"Was there a security incident?" correctly retrieved specifically
-`sample_large.pdf` chunk 2 of 5 (the Security Incidents section), not the
-whole document.
+each) because my first two samples were too short to ever split into
+more than 1 chunk, so retrieval had nothing to actually narrow down
+between. Checked real narrowing: "Was there a security incident?"
+correctly pulled specifically chunk 2 of 5 from `sample_large.pdf` (the
+Security Incidents section), not the whole doc.
 
 ## 18. Message router: skipping retrieval for non-document messages
-Found via manual testing: sending a plain "Hello" still ran full
-retrieval and showed 5 unrelated source chunks marked "Verified" - there
-was no step distinguishing a real document question from conversational
-chit-chat. Added a `route` node (role=`"router"`, the config had reserved
-this role since the project's first commit but nothing used it until
-now) that classifies each message, branching to either a direct
-conversational reply (no retrieval, no verification, no sources) or the
-existing retrieve/synthesize/verify loop. Confirmed: greetings and
-"thanks" correctly skip retrieval entirely (0 chunks), real questions are
-unaffected.
+Found this by just typing "Hello" into the chat — it still ran full
+retrieval and showed me 5 unrelated source chunks marked "Verified."
+Nothing was distinguishing a real document question from small talk.
+Added a `route` node (role `"router"` — I'd reserved this in config since
+day one but never actually used it) that classifies each message and
+branches to a direct reply or the retrieve/synthesize/verify loop.
+Confirmed greetings and "thanks" now skip retrieval entirely.
 
 ## 19. Hardening the verifier against multi-claim distortion
-Manual testing surfaced a serious gap: a dense, multi-fact answer
-("tell me about Q2") contained two real errors - a revenue comparison
-that conflated a year-over-year stat with a quarter-over-quarter one, and
-an SMB revenue trend with the direction inverted (said "up" when the
-source said "down") and attributed to a fabricated "Q1" reference - and
-the verifier still marked it `Verified`. Root cause: the verifier judged
-answers holistically rather than checking each individual claim, and
-strayed further once the answer's claim count grew.
+Asked "tell me about Q2" and got a dense multi-fact answer with two real
+errors — a revenue comparison that mixed up year-over-year with
+quarter-over-quarter, and an SMB trend with the direction flipped (said
+"up" when the source said "down") plus a made-up "Q1" reference — and the
+verifier still marked it `Verified`. It was judging answers holistically
+instead of checking each claim, and got worse the more claims there
+were.
 
-Fix: rewrote `VERIFIER_PROMPT` to require an explicit numbered
-claim-by-claim breakdown before any verdict, with specific instructions
-to check comparison direction and reference period for each claim, not
-just whether the same numbers appear somewhere in the context. Confirmed
-fixed, 3/3 consistent runs.
+Rewrote `VERIFIER_PROMPT` to force an explicit numbered claim-by-claim
+breakdown before any verdict, specifically checking comparison direction
+and time period per claim, not just "do these numbers appear somewhere."
+Confirmed fixed, 3/3.
 
-This surfaced a **false alarm** worth recording: an early version of this
-fix appeared to break the working citation-accuracy check from step 15
-(a mislabeled-source case started passing again). Investigating properly
-- by directly inspecting file contents rather than re-guessing at prompts
-- found the real cause: `sample_large.txt` (step 17) happened to reuse
-near-identical wording from the original `sample.pdf`, so the "wrong"
-citation in the test was no longer actually wrong once both documents
-were in the same index. The verifier was right; the test had gone stale.
-Rewrote the test against a fact confirmed (by directly loading and
-grep-checking the source files) to be unique to one document, and
-re-confirmed both the citation check and the new multi-claim check pass
-reliably together, 3/3 runs. Lesson: when a previously-passing test
-starts failing after an unrelated change, verify the test's assumptions
-against current reality before assuming the code regressed.
+**False alarm worth writing down.** An early version of this fix looked
+like it broke the citation check from step 15 — a mislabeled-source case
+started passing again. Checked properly instead of guessing at the
+prompt some more, and found the real cause: `sample_large.txt` (step 17)
+happened to reuse near-identical wording from `sample.pdf`, so the
+"wrong" citation in my test wasn't actually wrong anymore once both docs
+were in the index. The verifier was right, my test had just gone stale.
+Rewrote the test against a fact I confirmed (by grepping the source
+files directly) was unique to one doc, and both checks passed together,
+3/3. Lesson for myself: when something that used to pass starts failing
+after an unrelated change, check the test's assumptions before assuming
+I broke the code.
 
 ## 20. Fixing the "honest refusal" exception being too permissive
-Manual testing: asked "what is 1+1" (obviously outside the indexed
-documents). The synthesizer replied that the context doesn't contain the
-answer - correctly - and then answered anyway from general knowledge
-("the answer to 1+1 is 2"), which directly violates its own instruction
-to say so instead of guessing. Worse: the verifier still marked this
-`Verified`. Its own stated reason gave away the bug: it admitted the
-answer "does provide an unsolicited true fact" and passed it anyway.
+Asked "what is 1+1" (obviously not in my docs). The synthesizer said the
+context doesn't have it — correct — then answered anyway from general
+knowledge ("the answer to 1+1 is 2"), directly against its own
+instructions. Worse, the verifier still marked it `Verified`, and its own
+stated reason gave the bug away: it literally admitted the answer
+"provides an unsolicited true fact" and passed it anyway.
 
-Root cause: the honest-refusal exception in `VERIFIER_PROMPT` said an
-answer passes if it "states the context lacks the info and does not
-invent an answer anyway" - the model was reading "invent" narrowly as
-"lie about what's in the context," not "add any claim not sourced from
-the context at all," so a refusal-plus-outside-knowledge-guess slipped
-through as if it were a pure refusal.
+The honest-refusal exception said an answer passes if it "states the
+context lacks the info and does not invent an answer anyway" — the model
+was reading "invent" narrowly as "lie about the context" rather than "add
+anything not sourced from it," so a refusal-plus-guess slipped through as
+if it were a clean refusal.
 
-Fix: rewrote the exception to require that refusing is *all* the answer
-does - the moment it supplies any value beyond that, even something as
-obviously true as "1+1 is 2," it no longer qualifies, and gets checked
-as a normal unsupported claim (which correctly fails, since it isn't in
-the context). Verified 3/3 runs on both the bug case (now correctly
-`NOT_GROUNDED`) and a genuine pure-refusal case (still correctly
-`GROUNDED`) - no regression.
+Fixed by requiring refusing to be *all* the answer does — the second it
+adds any value at all, even something obviously true, it stops counting
+as a refusal and gets checked as a normal claim (which fails correctly,
+since it's not in the context). 3/3 on both the bug case and a genuine
+pure refusal, no regression.
 
 ## 21. Tightening the synthesizer's refusal wording
-Step 20 fixed the verifier catching this case, but the underlying
-question - the CSK trophies question and 1+1 both showed it - was that
-the synthesizer's own refusals were poor quality even when caught
-correctly: it would ramble describing what the context *is* about
-("the context appears to be related to a company's quarterly report,
-discussing revenue...") instead of just saying it doesn't know, and for
-1+1 specifically it kept tacking "the answer is 2" onto the end despite
-already being told not to guess.
+Step 20 fixed the verifier side, but the underlying issue — same CSK
+trivia and 1+1 questions showed it — was that the synthesizer's refusals
+were just bad even when caught correctly: rambling about what the context
+*is* about instead of saying it doesn't know, and for 1+1 specifically
+still tacking "the answer is 2" on the end.
 
-Rewrote `SYNTHESIZER_PROMPT` to require that a refusal be *only* a short,
-direct "I don't have that information" - no context summary, no
-explanation, and an explicit ban on supplying an answer from outside
-general knowledge, calling out arithmetic specifically since that was
-the exact case that slipped through. Verified: both the CSK and 1+1
-questions now produce a one-sentence "I don't have that information."
-and pass immediately (`grounded=True, attempts=0`) instead of needing
-the verifier to catch and retry a bad first attempt.
+Rewrote `SYNTHESIZER_PROMPT` to require a refusal be *only* a short
+direct "I don't have that information" — no summary, no explanation, and
+an explicit no on guessing from outside knowledge, calling out arithmetic
+by name since that's exactly what slipped through. Both questions now
+give a clean one-liner and pass immediately, no retry needed.
 
 ## 22. A third route: honestly-labeled general knowledge
-After step 21, "what is 1+1" correctly refused - but that raised a real
-design question: is flatly refusing trivial general knowledge actually
-the right behavior, or just annoying? The tempting fix (let the verifier
-be lenient about "obviously safe" general knowledge) was rejected - that
-would dilute what "Verified" means for every other answer, since the
-line between "safe to guess" and "risky ungrounded claim" is exactly the
-ambiguity this project exists to remove.
+After step 21, "what is 1+1" correctly refuses — but that raised a real
+question: is flatly refusing trivial general knowledge actually the
+right call, or just annoying? I considered letting the verifier be
+lenient about "obviously safe" stuff, but rejected that — it would dilute
+what "Verified" means everywhere else, since the line between "safe to
+guess" and "risky claim" is exactly the thing this whole project exists
+to remove.
 
-The better fix: a third router category, `GENERAL_KNOWLEDGE`, alongside
-the existing `DOCUMENT_QUESTION`/`CHITCHAT` split. Router prompt updated
-to a 3-way classification; `route_type` (a string) replaces the old
-`is_chitchat` boolean throughout the state, API response, and frontend
-types, since a boolean couldn't represent three routes. Matching
-questions get answered directly and honestly badged in the UI as
-"General knowledge — not from your documents" (a neutral gray badge,
-distinct from green "Verified" and amber "Unverified") - `grounded` is
-explicitly `False` for these by design, since they genuinely aren't
-grounded in the indexed documents; the badge is what makes that honest
-rather than confusing.
+Better fix: a third router category, `GENERAL_KNOWLEDGE`, next to
+`DOCUMENT_QUESTION`/`CHITCHAT`. `route_type` (a string) replaced the old
+`is_chitchat` boolean since a boolean can't hold three states. These
+questions now get answered directly and honestly badged "General
+knowledge — not from your documents" (neutral gray, not the green
+Verified badge) — `grounded` is explicitly `False` for these by design,
+since they really aren't grounded in my docs; the badge is what keeps
+that honest instead of confusing.
 
-Also added `is_refusal` tracking (checks if the synthesizer's answer is
-the exact short refusal phrase) for two reasons: (1) the frontend now
-hides the sources panel entirely on a refusal, since retrieved-but-unused
-chunks aren't meaningful evidence for an "I don't know," and (2) the
-graph now skips the retry loop immediately on a refusal rather than
-spending 2 retries rewriting a query that was never going to find an
-answer that doesn't exist - a real efficiency win, relevant after
-today's Groq quota exhaustion from heavy testing.
-
-Verified 5 cases end to end: chitchat (no sources, friendly reply),
-general knowledge x2 (1+1 -> "2", CSK trophies -> a real fact, both
-honestly un-badged as unverified), a normal document question (unchanged
-behavior), and an out-of-scope-but-plausible business question
-(correctly stayed on the document path and refused honestly, sources now
-hidden).
+Also added `is_refusal` tracking — hides the sources panel on a refusal
+(retrieved-but-unused chunks aren't real evidence for "I don't know"),
+and skips the retry loop immediately on a refusal instead of burning 2
+retries rewriting a query that was never going to find something that
+doesn't exist. Tested 5 cases end to end and all behaved as expected.
 
 ## 23. Fixing a real "stuck on Thinking..." bug
-Manual testing: a question hit Groq's daily quota again mid-request, and
-the UI just sat on "Thinking..." forever instead of showing an error.
-Checked the actual server logs (not guessed) and found the real cause:
-`app/main.py`'s `/ask` endpoint had no exception handling at all, so an
-unhandled `RateLimitError` produced an ungraceful failure the frontend
-couldn't parse cleanly - and separately, the frontend's own error path
-was already broken: `api.ts` discarded the response body on a failed
-request instead of reading it, and `App.tsx`'s catch block used a bare
-`catch {}` that threw away whatever error it caught in favor of one
-hardcoded generic message regardless of the real cause.
+Hit Groq's daily quota mid-request and the UI just sat on "Thinking..."
+forever instead of showing an error. Checked the actual server logs
+instead of guessing and found `/ask` had zero exception handling, so an
+unhandled `RateLimitError` produced a mess the frontend couldn't parse —
+and separately, the frontend's own error handling was already broken:
+`api.ts` threw away the response body on failure, and `App.tsx`'s catch
+block discarded whatever it caught in favor of one hardcoded message.
 
-Three-part fix: (1) `/ask` now catches `RateLimitError` specifically and
-returns a proper `503` with a clear message, plus a generic `500`
-fallback for anything else - confirmed the response is fast (under 1s)
-and parseable instead of a generic unhandled error. (2) `api.ts` now
-reads the response body and surfaces the backend's actual `detail`
-message. (3) `App.tsx`'s catch block now uses the real caught error's
-message instead of discarding it. Together this turns an indefinite,
-unexplained "stuck" state into an honest, specific error message the
-user can actually act on.
+Fixed all three: `/ask` now catches `RateLimitError` and returns a clean
+`503`, plus a generic `500` fallback; `api.ts` reads and surfaces the
+real error detail; `App.tsx` uses the actual caught message. Turned an
+unexplained stuck state into a real error the user can act on.
 
 ## 24. Evaluation harness (built, not yet validated with a live run)
-Built the actual measurement behind this project's core claim, instead
-of leaving "reduces hallucination" as an unverified assertion.
-`app/eval/cases.py` defines 11 hand-written test cases with ground truth
-verified by directly re-reading all four indexed documents in full (not
-guessed) - 7 answerable questions with specific expected facts (exact
-figures like "4.2 million," "108 percent," "142" employees), and 4
-questions the documents genuinely don't answer (including the "Q2
-revenue" and "1+1" cases already investigated in steps 20-22).
-`app/eval/scorer.py` scores each run: for answerable cases, hallucinated
-if any expected fact is missing from the answer, or if the system
-refused something it should have answered; for unanswerable cases,
-hallucinated only if the system gave a confident document-grounded
-answer instead of refusing or routing to general knowledge.
-`scripts/run_eval.py` runs the full set (or a `[limit]` subset) through
-the real agent, prints per-case results, and writes a full JSON report.
+Built the actual measurement behind my hallucination-rate claim instead
+of just asserting it. `app/eval/cases.py`: 11 hand-written questions with
+ground truth I checked by re-reading all four docs myself — 7 answerable
+with specific expected facts, 4 the docs genuinely don't answer.
+`scorer.py` scores each run; `run_eval.py` runs the set and writes a JSON
+report.
 
-Deliberately kept to 11 cases, not a much larger set: each question can
-cost thousands of tokens once retries are counted (worked out in detail
-earlier today), so a bigger batch risked exceeding the entire daily free
-quota in a single run, not just needing a short wait.
+Kept it to 11 cases on purpose — each question can cost thousands of
+tokens with retries, and I'm on a free daily quota, so a bigger batch
+risked blowing the whole thing in one run.
 
-Honest status: attempted to validate on a 2-case subset and immediately
-hit the same Groq daily quota wall (99,669/100,000 used, no headroom
-left at all from today's heavy testing). The harness code itself is
-confirmed sound - it ran correctly through routing, retrieval, and the
-first LLM call before failing on the actual network request, and all
-modules import cleanly with no errors - but a real end-to-end run with
-actual hallucination-rate numbers has not happened yet. That's the
-immediate next step once quota is available again.
+Tried to validate on 2 cases and immediately hit the Groq quota wall
+(99,669/100,000 used from today's testing). The harness code itself ran
+fine up to the actual network call, so I know it's sound — just no real
+numbers yet.
 
 ## 25. First real eval run: 9.1%, then expanded to a categorized 39-case set
-Once quota freed up, ran the 11-case harness for real for the first
-time: **9.1% hallucination rate (1/11)**. The one failure was itself
-informative, not a mystery: "What was Q2 revenue?" produced a live
-calculation from the stated year-over-year growth figure (4.2 / 1.12 =
-3.75 million) - the exact conflation-of-comparison-periods error
-investigated in step 19, just resurfacing on a different specific
-phrasing. 10/11 correct, including all 7 answerable questions and 3/4
-unanswerable ones handled correctly.
+Once quota freed up, ran it for real: 9.1% (1/11). The one failure was
+useful, not random — "What was Q2 revenue?" produced a live calculation
+off the year-over-year growth figure, the same comparison-period mixup
+from step 19 resurfacing under different phrasing.
 
-Discussed whether 9.1% needed to be "improved" before it's usable - the
-conclusion: no. A suspiciously perfect 0% would look less credible in an
-interview than an honest number with one well-understood failure mode.
-The real gap was elsewhere: 11 cases is a small, mostly one-shaped test
-set (simple factual lookups). Redesigned `app/eval/cases.py` to 39 cases
-across 5 categories that each stress a different part of the pipeline:
-15 simple lookups, 10 paraphrased (same facts, deliberately different
-wording, to stress dense vs. BM25 retrieval differently), 5 multi-hop
-(answer requires combining facts from two different chunks or
-documents), 6 unanswerable/adversarial (the most important category for
-this project specifically), and 3 exact-figure lookups. `run_eval.py`
-now reports hallucination rate per category, not just one aggregate
-number, and every new fact was verified by re-reading all four source
-documents in full again, not assumed correct from memory.
+Talked myself through whether 9.1% needed to look better before I'd trust
+it — decided no. A suspiciously perfect 0% would actually look less
+credible than an honest number with one well-understood failure. The
+real gap was that 11 cases is a small, mostly-one-shaped set. Expanded
+`cases.py` to 39 across 5 categories that each stress something
+different: 15 simple lookups, 10 paraphrased (same facts, different
+wording, to stress dense vs. BM25 differently), 5 multi-hop, 6
+unanswerable/adversarial (the category that matters most for what this
+project claims to do), 3 exact-figure. `run_eval.py` now reports
+hallucination rate per category, and I re-verified every fact against the
+source docs again rather than trust my memory.
 
-Also made the harness genuinely resumable: hitting the daily quota
-mid-run used to mean losing the whole run's results (or, after the step
-24 resilience fix, at least not crashing, but still re-spending tokens
-on already-answered questions on the next attempt). `run_eval.py` now
-reads any existing `eval_results.json`, skips questions already scored,
-and only spends new quota on cases not yet run, merging results into a
-cumulative report across multiple passes.
+Also made the harness resumable — hitting quota mid-run used to mean
+losing everything (or at least not crashing, after step 24's fix, but
+still re-spending tokens on stuff I already had answers for).
+`run_eval.py` now skips already-scored questions and merges into a
+cumulative report.
 
-Honest current status: across three separate attempts (including one on
-a fresh day, after the quota's rolling 24-hour window had time to
-partially recover), only **7 of the 39 cases have actually run** -
-`simple_lookup` questions only, 0% hallucination on all 7. The categories
-that matter most for proving this project's actual claim - paraphrased
-wording, multi-hop reasoning, and especially the unanswerable/adversarial
-set - have not been scored yet, blocked purely by Groq free-tier daily
-quota, not by any code issue. Next session: keep resuming with
-`run_eval.py` until all 39 are scored, or consider the paid tier if
-waiting stays impractical.
+Ended this session at 7/39 actually run (simple lookups only, 0%), the
+categories that matter most still untested, blocked purely by quota.
 
 ## 26. Spreadsheet ingestion, and a real BM25 tokenization bug it surfaced
-Started on the multimodal document router (still-open roadmap item):
-spreadsheets first, since unlike scanned-PDF OCR it needs no LLM calls
-and carries no quota risk. `load_spreadsheet()` in `app/ingestion/loaders.py`
-reads `.csv`/`.xlsx`/`.xls` via `pandas`, turning each row into a
-"Column: value, Column: value" line - readable prose for chunking, not a
-raw table dump. `load_document()`'s dispatcher now routes these
-extensions there. Added `data/sample_expenses.csv` (a monthly
-expense-by-department breakdown) as real test data and indexed it
-alongside the existing documents.
+Started on multimodal ingestion — spreadsheets first since they need no
+LLM calls, no quota risk. `load_spreadsheet()` reads `.csv`/`.xlsx`/`.xls`
+via pandas, turning each row into a "Column: value" line instead of a raw
+table dump. Added `data/sample_expenses.csv` and indexed it.
 
-Testing retrieval on it surfaced a genuine bug, not a spreadsheet-specific
-one: asking "How much was spent on marketing campaigns in August?" didn't
-return the CSV chunk in the top 3 results at all, despite it containing
-those exact words. Traced it to `app/retrieval/sparse.py`'s BM25
-tokenizer, which has used plain `.lower().split()` since it was first
-built - this leaves punctuation glued to words, so `"august,"` (from a
-comma-delimited CSV row) and `"august?"` (from a naturally-phrased
-question) are different tokens and never match. This was always a latent
-issue (flagged as a known simplification in `chunker.py`'s docstring
-early in the project) but never actually caused a visible problem until
-now, since spreadsheet rows are far more comma-dense than prose.
+Testing it surfaced a real bug that had nothing to do with spreadsheets
+specifically: "How much was spent on marketing campaigns in August?"
+didn't return the CSV chunk in the top 3 at all, even though it literally
+contains those words. Traced it to my BM25 tokenizer, which has just used
+`.lower().split()` since I first wrote it — that leaves punctuation glued
+to words, so `"august,"` and `"august?"` are different tokens and never
+match. I'd actually flagged this as a known simplification way back in
+`chunker.py`'s docstring, but it never actually bit me until spreadsheet
+rows (way more comma-dense than prose) exposed it.
 
-Fixed by replacing the tokenizer with a regex that extracts only
-alphanumeric tokens (`re.findall(r"[a-z0-9]+", text.lower())`), applied
-consistently to both indexing and querying. Verified precisely: before
-the fix, BM25 ranked the CSV chunk 8th out of 13 for that query (score
-1.60); after the fix, it ranked 1st, more than double the next result
-(score 6.32, vs. 2.86). This is a real quality improvement to hybrid
-search generally, not just for spreadsheets - any query or document with
-different punctuation around shared words was affected.
+Fixed with a regex tokenizer that only pulls out alphanumeric chunks.
+Checked precisely: before the fix the CSV chunk ranked 8th out of 13 for
+that query; after, it ranked 1st by a wide margin. This helps hybrid
+search generally, not just spreadsheets.
 
 ## 27. Scanned-PDF OCR via a vision model
-The second half of the multimodal document router. Checked pricing first
-before building anything: neither Groq, OpenAI, nor Anthropic currently
-offer a free vision-capable model - Groq's (`qwen/qwen3.6-27b`, added to
-`ROLE_MODELS` as a new `vision_ocr` role) is a paid preview model, not
-covered by the free tier that every other role uses. Decided to proceed
-anyway with real (small) cost, since there's no free path to this
-feature with the providers already set up.
+Second half of multimodal ingestion. Checked pricing before building
+anything — none of Groq, OpenAI, or Anthropic have a free vision model
+right now; Groq's (`qwen/qwen3.6-27b`) is paid preview. Decided to eat
+the small cost since there's no free option with the providers I already
+have set up.
 
-`app/ingestion/vision.py` adds `ocr_image()`, sending a base64-encoded
-image through `call_llm(role="vision_ocr", ...)` using the same
-multimodal message format the OpenAI-compatible SDK already supports -
-no changes needed to `llm_router.py` itself, since it just passes
-`messages` through unchanged. `load_pdf()` in `loaders.py` now checks
-each page's extracted text length; pages under a small threshold (likely
-scanned, no real text layer) get rendered to an image via `pymupdf` and
-routed through OCR instead of pypdf's text extraction.
+`app/ingestion/vision.py` sends a base64 image through
+`call_llm(role="vision_ocr", ...)` — didn't even need to touch
+`llm_router.py` since it just passes messages through as-is. `load_pdf()`
+now checks each page's extracted text length and routes short-text pages
+(likely scanned) through OCR instead of pypdf.
 
-Built a real test fixture rather than assuming it would work: rendered
-text onto an image with PIL, embedded it in a PDF with no text layer
-(confirmed via `pypdf` extracting exactly 0 characters from it - a
-genuine simulated scan, not just a normal PDF). First real OCR test
-succeeded and correctly transcribed the image's text, but surfaced a
-real bug: the configured model is a "thinking" model that prepended its
-raw chain-of-thought in `<think>...</think>` tags despite being
-explicitly told not to add commentary - if left in, that reasoning noise
-would have been chunked and indexed as if it were real document content.
-Fixed by stripping `<think>` blocks from the OCR output before returning
-it. Re-tested and confirmed clean output, then indexed the scanned PDF
-for real and verified retrieval finds it correctly (ranked #1 for a
-question about its content, ahead of every other document).
+Built a real test file instead of assuming it'd work — rendered text onto
+an image, embedded it in a PDF with no text layer (confirmed via pypdf
+extracting exactly 0 characters — a genuinely fake "scan," not just a
+normal PDF). First OCR test worked but the model — a "thinking" model —
+leaked its raw reasoning in `<think>` tags despite being told not to.
+Fixed by stripping those tags. Re-tested, clean output, indexed it for
+real, and it correctly ranked #1 for a question about its content.
 
-## 28. Groq deprecated our text model out from under us
-Trying to resume the eval harness, every call started failing with
-`model_not_found` instead of the familiar rate-limit error - a
-genuinely different problem, not more quota exhaustion. Investigated
-properly instead of guessing: Groq deprecated `llama-3.3-70b-versatile`
-(the model `router`, `query_rewrite`, `verifier`, and `synthesizer` had
-all been using since step 13) on 2026-08-16 - literally the day before
-this was caught. Their official recommended successor is
-`openai/gpt-oss-120b`, also free-tier, and notably with a much higher
-daily token quota (~200K vs. the 100K that caused most of today's
-friction).
+## 28. Groq deprecated my text model out from under me
+Trying to pick the eval harness back up, every call started failing with
+`model_not_found` instead of the usual rate limit — clearly a different
+problem. Checked properly: Groq deprecated `llama-3.3-70b-versatile` (the
+model every real role had been using since step 13) literally the day
+before I noticed. Their recommended replacement is `openai/gpt-oss-120b`,
+also free-tier, with a notably bigger daily quota.
 
-Updated all four roles in `ROLE_MODELS` to the new model. Verified in two
-steps before trusting it: a raw `call_llm` call succeeded, then a full
-`answer_question()` run through the entire graph (route -> retrieve ->
-synthesize -> verify) also succeeded with a correct, grounded answer.
-Worth remembering going forward: a hosted provider's free/available
-models can change without the code changing at all - a sudden
-`model_not_found` after something worked reliably for hours is a sign to
-check for a provider-side deprecation, not just assume the code broke.
+Updated all four roles. Verified in two steps before trusting it — a raw
+call succeeded, then a full `answer_question()` run through the whole
+graph also succeeded with a correct answer. Lesson for future me: a
+sudden `model_not_found` after hours of things working fine means check
+for a provider-side deprecation, don't just assume I broke something.
 
 ## 29. Windows console crash, a scorer bug, and the final eval result: 0%
-Resuming the eval harness with the new model, `run_eval.py` crashed
-outright partway through printing an answer:
-`UnicodeEncodeError: 'charmap' codec can't encode character ' '`.
-Windows' console defaults to a legacy codepage that can't display many
-Unicode characters LLMs commonly produce. Fixed by reconfiguring stdout
-to UTF-8 at the top of the script (`sys.stdout.reconfigure(encoding=
-"utf-8", errors="replace")`) instead of hoping models never use one.
+Resuming the harness with the new model, `run_eval.py` crashed outright
+mid-print with a `UnicodeEncodeError` — Windows' console can't display a
+lot of Unicode characters LLMs commonly output. Fixed by forcing UTF-8 on
+stdout at the top of the script.
 
-Re-running surfaced something much more interesting: 11 of 38 cases came
-back "HALLUCINATED," a 28.9% rate - but reading the actual flagged
-answers, several plainly *contained* the fact they were marked as
-missing (e.g. "The SMB revenue this quarter was 1.3 million dollars"
-flagged as missing "1.3 million"). Investigated properly rather than
-trusting the number: checked the raw bytes of the saved answer and found
-`openai/gpt-oss-120b` (the new model from step 28) writes numbers using
-` `, a narrow no-break space, instead of a normal space - so
-"1.3 million" never literally contains the ASCII string "1.3
-million", even though a human reader can't tell the difference. The same
-issue hit refusal detection from a different angle: the model writes a
-curly apostrophe (`'`, U+2019) in "don't," which never matches the
-straight-ASCII-apostrophe prefix check `REFUSAL_PREFIX` was looking for.
-One case also failed for a real but different reason: the model wrote
-"108%" where the test expected "108 percent" - a legitimate format
-mismatch in the test case, not a Unicode issue.
+Re-running surfaced something more interesting: 11 of 38 cases came back
+"HALLUCINATED," 28.9%. But reading the actual flagged answers, several
+plainly *contained* the fact they were supposedly missing. Checked the
+raw bytes instead of trusting the number and found `openai/gpt-oss-120b`
+writes numbers with a narrow no-break space instead of a regular space —
+so "1.3 million" in the answer never literally matched my ASCII "1.3
+million" keyword, even though no human would notice a difference. Same
+issue from a different angle broke refusal detection: the model uses a
+curly apostrophe in "don't," which never matched my straight-ASCII prefix
+check. One more case failed for an unrelated but real reason — the model
+wrote "108%" where my test expected "108 percent."
 
-Fixed properly, not just patched around this one run: added
-`app/text_utils.py` with a `normalize_text()` function that maps this
-whole class of "smart typography" (narrow/non-breaking spaces, curly
-quotes, special hyphens/dashes) to plain ASCII, applied consistently in
-both `graph.py`'s refusal detection and `scorer.py`'s keyword matching.
-Also loosened the two percentage-based test cases in `cases.py` from
-`"108 percent"` to `"108"`, robust to either "108 percent" or "108%".
+Fixed properly: added `app/text_utils.py` to normalize this whole class
+of "smart typography" to plain ASCII, used consistently in both refusal
+detection and keyword scoring. Loosened the two percentage test cases to
+just "108" so either format matches.
 
-Rather than re-spend quota re-answering 38 questions whose real answers
-were already correct, wrote `scripts/rescore_eval.py`: re-applies the
-fixed scorer to the already-collected answers with **zero new LLM
-calls**, since the bug was in how we measured, not in what the agent
-actually said. All 11 false positives flipped to correctly-passing, and
-critically, *no other case changed* - confirming the fix was precise, not
-just generally more lenient. Ran the one case that had failed to a rate
-limit blip, completing all 39.
+Instead of re-spending quota re-answering 38 questions I already had
+correct answers for, wrote `scripts/rescore_eval.py` — re-applies the
+fixed scorer to already-collected answers with zero new LLM calls, since
+the bug was in my measurement, not in what the agent actually said. All
+11 false positives flipped to correctly-passing, and importantly nothing
+else changed, which told me the fix was precise and not just more
+lenient across the board. Ran the one case that had hit a rate limit
+blip, completing all 39.
 
-**Final result: 39/39 cases scored, 0.0% hallucination rate, across all
-five categories** (simple lookups, paraphrased wording, multi-hop
-reasoning, unanswerable/adversarial questions, exact-figure lookups).
-Worth being honest about why this is a believable 0%, not a suspicious
-one: it wasn't achieved by loosening what counts as a pass - every fix
-in this step was a precise correction to a specific, root-caused
-measurement bug, verified not to affect any other case. The underlying
-agent's actual answers were correct in all 11 originally-flagged cases;
-only the scoring had bugs. Still worth remembering for any future
-discussion of this number: 39 cases is a real but modest sample size,
-not a large-scale statistical benchmark.
+**Final result: 39/39 scored, 0.0% hallucination, across all five
+categories.** I want to be honest about why I actually believe this
+number instead of being suspicious of it: I didn't get here by loosening
+what counts as a pass — every fix this step was a precise correction to
+a specific, root-caused bug in my scoring, verified not to touch any
+other case. The agent's real answers were correct in all 11 originally-
+flagged cases the whole time; only my scoring was broken. Still worth
+remembering: 39 cases is a real but modest sample, not a big benchmark.
 
 ## 30. Spot-checking historical fixes against the new model, and a real router miss
-Switching models (step 28) is exactly the kind of change that deserves
-re-checking known-risky scenarios directly, not just trusting the clean
-aggregate eval number - so re-ran three of the session's earlier bug
-cases specifically against `openai/gpt-oss-120b`.
+Swapping the model (step 28) is exactly the kind of change that deserves
+re-checking known-risky scenarios directly instead of just trusting the
+clean aggregate number, so I re-ran three of my earlier bug cases
+specifically against `openai/gpt-oss-120b`.
 
-Two turned out fine on inspection: the citation-mislabeling test (step
-15) initially looked like a regression (verifier said `Verified` when a
-fake "according to the text file" answer was fed in), but checking the
-actual retrieved chunk showed `data/sample_large.txt` genuinely contains
-that phrase now (added in step 17) - the exact same "stale test premise"
-situation as the step 19 false alarm, not a real regression. The strict
-refusal behavior (step 21) also held: an unambiguous Q2 revenue question
-got a clean, honest refusal, no hallucinated calculation.
+Two turned out fine. The citation test (step 15) looked like a
+regression at first — verifier said `Verified` on a fake "according to
+the text file" answer I fed it — but checking the actual retrieved chunk
+showed `sample_large.txt` genuinely contains that phrase now (added in
+step 17), same stale-test situation as step 19, not a real regression.
+The strict-refusal behavior (step 21) also held up fine on a clean,
+unambiguous Q2 question.
 
-One was a real, new issue: "tell me about q2" got classified
-`GENERAL_KNOWLEDGE` and answered with a generic dictionary definition of
-what a fiscal quarter is, instead of checking the documents - different
-behavior from the old model, which reliably routed this to document
-search. Root cause: `ROUTER_PROMPT` only told the model to route to
-general knowledge when a question was "unrelated" to business documents,
-without weighting *which way to guess* on genuinely ambiguous phrasing -
-for a tool whose entire indexed content is a company's quarterly
-reports, "Q2" is not a neutral topic, it's core subject matter.
+One was real and new: "tell me about q2" got classified
+`GENERAL_KNOWLEDGE` and answered with a dictionary definition of what a
+fiscal quarter is, instead of checking the docs — different from how the
+old model handled it. My router prompt only said to use general
+knowledge when a question was "unrelated" to the documents, without
+saying which way to guess on genuinely ambiguous phrasing. For a tool
+whose entire indexed content is a company's quarterly reports, "Q2" isn't
+a neutral word.
 
 Fixed by rewriting the prompt to explicitly bias ambiguous-but-plausible
-business references toward `DOCUMENT_QUESTION` ("when in doubt... it's
-much better to search and correctly report nothing relevant was found
-than to skip a question that might be answerable"), while keeping
-`GENERAL_KNOWLEDGE` reserved for messages with no plausible connection to
-business content at all. Verified: "tell me about q2" now correctly
-routes to the document path and honestly refuses, while the two genuine
-general-knowledge control cases (1+1, CSK trophies) still correctly
-route to `GENERAL_KNOWLEDGE` - confirming the fix was targeted, not an
-overcorrection that would misroute everything to document search.
+business references toward `DOCUMENT_QUESTION`, keeping
+`GENERAL_KNOWLEDGE` for things with no plausible connection to business
+content at all. Verified: "tell me about q2" now correctly hits the
+document path and honestly refuses, and my two genuine general-knowledge
+controls (1+1, CSK trophies) still route correctly — so the fix was
+targeted, not an overcorrection.
 
-## 31. An honest gap: no baseline ablation existed before publishing "0%"
-A fair question had never actually been answered: had the same 39 cases
-ever been run *without* the verifier/retry loop, to show what it
-actually contributes versus asserting it matters? No - every eval run so
-far went through the full pipeline. Built one properly rather than
-assume: `build_graph()` and `answer_question()` in `graph.py` now take a
+## 31. An honest gap: no baseline ablation existed before I trusted "0%"
+Got asked a fair question I hadn't actually answered myself: had I ever
+run the same 39 cases *without* the verifier/retry loop, to show what it
+actually contributes instead of just assuming it matters? No — every eval
+run so far went through the full pipeline. Built it properly rather than
+hand-wave an answer: `build_graph()`/`answer_question()` now take a
 `with_verification` flag; `False` compiles a genuinely smaller graph
-(route -> retrieve -> synthesize -> stop, no verify/retry nodes added at
-all) rather than simulating the absence some other way.
-`scripts/run_eval_baseline.py` mirrors `run_eval.py`'s resumable pattern
-against a separate `eval_results_baseline.json`, so it never touches the
-real results.
+(route → retrieve → synthesize → stop, verify/retry nodes never even
+added), not a fake simulation of skipping them.
+`scripts/run_eval_baseline.py` mirrors the resumable pattern against a
+separate results file so it can't touch my real numbers.
 
-Ran it: 9 of 39 cases completed before hitting the Groq quota wall again.
-One real difference surfaced: "Was there a security incident this
-quarter?" answered incompletely without verification (missing the
-40-minute duration) but completely with it. Important honesty check
-before treating that as proof: the with-verification run shows
-`attempts: 0` - the verifier approved that answer on the first try, no
-retry ever fired. Since the corrective-retry mechanism wasn't actually
-exercised for this case, the completeness difference could be ordinary
-sampling variance between two independent API calls (temperature > 0),
-not a proven causal effect of verification. One suggestive data point
-is not the same as a real ablation result.
+Ran it: 9 of 39 completed before I hit the quota wall again. One real
+difference showed up — "Was there a security incident this quarter?"
+answered incompletely without verification (missing the 40-minute
+duration) but completely with it. But I want to be honest about what
+this does and doesn't prove: the with-verification run shows
+`attempts: 0`, meaning the verifier approved it on the first try — the
+retry mechanism never actually fired. So this specific difference could
+just be normal sampling variance between two separate API calls, not
+proof the verifier caused anything. One suggestive data point isn't a
+real ablation result yet.
 
-Honest current status: the baseline is real infrastructure with real
-partial data, not yet a complete comparison (30 of 39 cases still
-pending, and zero cases so far where a retry was actually triggered and
-demonstrably fixed something). Any claim that the verifier *causes* the
-measured hallucination rate should wait until this is finished - the
-mechanism and the measured outcome are currently two separately-true
-facts, not a proven cause and effect. Resume with
-`scripts/run_eval_baseline.py` once quota allows, ideally watching
-specifically for a case where `attempts > 0` in the full-pipeline run to
-get real evidence of the retry mechanism itself mattering, not just the
-verifier's first-pass judgment.
+Where this leaves me: real infrastructure, real partial data, not yet a
+complete comparison (30 of 39 still pending, and no case yet where a
+retry actually fired and visibly fixed something). I'm holding off on
+any claim that the verifier *causes* the measured rate until this
+finishes — right now the mechanism and the outcome are two separately-
+true facts, not a proven cause and effect. Picking this back up with
+`scripts/run_eval_baseline.py` whenever quota allows, watching
+specifically for a case where `attempts > 0` in the full run.
+
+## 32. Broke my own Unicode fix while editing, caught it before committing
+Doing a pass on this file's wording, I rewrote `text_utils.py` and, while
+retyping the special-character dict, accidentally collapsed two different
+invisible characters (narrow no-break space and non-breaking space) into
+the same literal ASCII space — silently overwriting one dict entry with
+the other and turning both into no-ops. Didn't assume the edit was fine
+just because it looked right; ran the actual function against explicit
+`chr(0x2019)`/`chr(0x202f)` test input and it failed. Checked the dict's
+real code points directly and found only 8 distinct entries where there
+should be 9.
+
+Also hit a second, dumber version of the same class of mistake trying to
+fix it — wrote a Python script to regenerate the file programmatically,
+but used `{{`/`}}` out of f-string habit in a plain string, which
+`ast.parse()` happily accepted as valid syntax (parses fine as nested
+literals) but which fails at actual runtime (`unhashable type: 'dict'`
+trying to use a dict as another dict's key). Good reminder that syntax
+validity isn't the same as correctness — parsing without errors doesn't
+mean the code does what I think it does.
+
+Fixed for real by writing the file line-by-line with explicit `\uXXXX`
+escape text instead of literal characters, verified against actual
+`chr()` code points afterward, not just eyeballed. Small thing, but a
+good example of why I check my own edits instead of assuming a rewrite
+that "looks right" actually is.

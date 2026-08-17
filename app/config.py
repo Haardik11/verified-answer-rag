@@ -1,16 +1,15 @@
 """
-Central config: which model each agent role uses.
+Central config: which model each agent role uses. Change one of these to
+swap providers, no other code needs to touch it.
 
-Change any of these to swap providers without touching any pipeline code.
-"ollama"    -> free, local, unlimited. Good for dev/debugging and simple roles.
-"openai"    -> paid API. Good for roles that need real judgment (verifier).
-"anthropic" -> paid API. Same idea, different provider.
-"groq"      -> paid API (OpenAI-compatible). Hosts larger open-weight models
-               (e.g. GPT-OSS 120B) - used for verifier and synthesizer, since
-               the free local 3B model wasn't reliably self-consistent at
-               judging whether an answer is grounded, and also tended to
-               paraphrase source citations incorrectly in its written answers
-               (see DEVLOG.md steps 12-13).
+"ollama"    - free, local, unlimited. Fine for dev/debugging and simple roles.
+"openai"    - paid API. Good for roles that need real judgment (verifier).
+"anthropic" - paid API, same idea.
+"groq"      - paid API, OpenAI-compatible. Bigger open-weight models (e.g.
+              GPT-OSS 120B). Switched verifier/synthesizer here because the
+              free local 3B model kept contradicting itself on grounding
+              judgments and mangling source citations - see DEVLOG steps 12-13
+              for the actual debugging story.
 """
 
 from dataclasses import dataclass
