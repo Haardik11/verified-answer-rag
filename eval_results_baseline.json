@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-08-17T15:28:54.323174+00:00",
+  "timestamp": "2026-08-17T17:05:58.965178+00:00",
   "condition": "verification_disabled_baseline",
   "total_cases_defined": 39,
-  "total_cases_scored": 20,
+  "total_cases_scored": 24,
   "hallucinated_count": 1,
-  "hallucination_rate_percent": 5.0,
+  "hallucination_rate_percent": 4.2,
   "by_category": {
     "simple_lookup": {
       "total": 15,
@@ -12,7 +12,7 @@
       "rate_percent": 6.7
     },
     "paraphrased": {
-      "total": 5,
+      "total": 9,
       "hallucinated": 0,
       "rate_percent": 0.0
     }
@@ -217,6 +217,46 @@
       "route_type": "document",
       "attempts": 0,
       "answer": "The company ended the quarter with\u202f$18.4\u202fmillion in cash and cash equivalents, which provides roughly\u202f22\u202fmonths of runway at its current burn rate."
+    },
+    {
+      "question": "Is the platform reliable?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes\u2014the platform demonstrated strong reliability, maintaining a 99.94\u202f% uptime for the core API in Q3, which exceeds its internal 99.9\u202f% target."
+    },
+    {
+      "question": "How satisfied are customers, based on survey data?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Customers reported a net promoter score of\u202f42, which remained steady and matches the company\u2019s four\u2011quarter average."
+    },
+    {
+      "question": "What's new with the product this quarter?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "This quarter the company released two product updates: the analytics dashboard went live for all customers in August after a six\u2011week beta, and a mobile\u2011app update in September improved notification reliability, cutting related complaints by roughly 60\u202f% month over month."
+    },
+    {
+      "question": "Are there any tech debt concerns?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes. A technical\u2011debt audit in July flagged the monolithic authentication service\u2014lacking test coverage\u2014as a high\u2011priority risk to release velocity, and a two\u2011engineer team was assigned to refactor it in Q4."
     }
   ]
 }
