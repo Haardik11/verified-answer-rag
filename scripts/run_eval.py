@@ -29,6 +29,14 @@ from app.agent.graph import answer_question
 from app.eval.cases import CASES
 from app.eval.scorer import score_case
 
+# Windows' console defaults to a legacy codepage that can't display many
+# Unicode characters LLMs commonly produce (narrow spaces, smart quotes,
+# em-dashes) - printing one used to crash this script outright mid-run,
+# losing every result collected in that pass. UTF-8 can represent all of
+# them, so reconfigure stdout instead of hoping the model never uses one.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 RESULTS_PATH = Path("eval_results.json")
 
 previous_cases = {}

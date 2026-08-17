@@ -1,12 +1,32 @@
 {
-  "timestamp": "2026-08-16T21:24:38.943623+00:00",
+  "timestamp": "2026-08-17T10:23:04.345889+00:00",
   "total_cases_defined": 39,
-  "total_cases_scored": 7,
+  "total_cases_scored": 39,
   "hallucinated_count": 0,
   "hallucination_rate_percent": 0.0,
   "by_category": {
     "simple_lookup": {
-      "total": 7,
+      "total": 15,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "paraphrased": {
+      "total": 10,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "multi_hop": {
+      "total": 5,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "unanswerable": {
+      "total": 6,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "exact_figure": {
+      "total": 3,
       "hallucinated": 0,
       "rate_percent": 0.0
     }
@@ -81,6 +101,326 @@
       "route_type": "document",
       "attempts": 0,
       "answer": "The company has 142 employees."
+    },
+    {
+      "question": "What was SMB revenue this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The SMB revenue this quarter was\u202f1.3\u202fmillion dollars."
+    },
+    {
+      "question": "What was self-serve revenue this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Self\u2011serve revenue for the quarter was\u202f$800,000."
+    },
+    {
+      "question": "What was the cost of goods sold?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The cost of goods sold was\u202f$620,000."
+    },
+    {
+      "question": "What was research and development spend?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The research and development spend was\u202f$740,000."
+    },
+    {
+      "question": "What was the net promoter score?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The net promoter score was 42."
+    },
+    {
+      "question": "How much cash did the company have at quarter end?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company ended the quarter with\u202f$18.4\u202fmillion in cash and cash equivalents."
+    },
+    {
+      "question": "What was the core API uptime this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The core API achieved 99.94\u202f% uptime this quarter."
+    },
+    {
+      "question": "How many events does the analytics pipeline process per day?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The analytics pipeline processes about\u202f40\u202fmillion events each day."
+    },
+    {
+      "question": "How much money did the company make in Q3?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company generated\u202f$4.2\u202fmillion in revenue during Q3."
+    },
+    {
+      "question": "Why did expenses stay flat this quarter?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 1,
+      "answer": "Expenses stayed flat because headcount was stable\u2014no net new hires were made in engineering or sales\u2014so operating costs did not increase, keeping total operating expenses at the same level as the prior quarter."
+    },
+    {
+      "question": "Did anything go wrong security-wise recently?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes. In early September a severity\u20111 security incident occurred when a misconfigured access\u2011control rule briefly allowed a small set of internal analytics dashboards to be reachable without authentication for about 40\u202fminutes; the issue was detected by automated monitoring, rolled back, and no external access was observed. No other security incidents meeting the internal disclosure threshold were reported during the quarter."
+    },
+    {
+      "question": "How big is the engineering team?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The engineering team consists of 58 members."
+    },
+    {
+      "question": "How's the company's cash position looking?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company ended the quarter with\u202f$18.4\u202fmillion in cash and cash equivalents, which provides roughly\u202f22\u202fmonths of runway at its current burn rate."
+    },
+    {
+      "question": "Is the platform reliable?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes. During Q3 the platform\u2019s core API achieved a 99.94\u202f% uptime, surpassing the internal 99.9\u202f% reliability target."
+    },
+    {
+      "question": "How satisfied are customers, based on survey data?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Customers reported a net promoter score of\u202f42, which remained steady and matches the company\u2019s four\u2011quarter average."
+    },
+    {
+      "question": "What's new with the product this quarter?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "This quarter the company launched its new analytics dashboard\u2014made generally available in August after a beta\u2014and shipped a mobile\u2011app update in September that improved notification reliability, cutting notification\u2011delivery complaints by about 60\u202f%."
+    },
+    {
+      "question": "Are there any tech debt concerns?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes. A technical\u2011debt audit highlighted the authentication service as a major concern because its monolithic architecture and lack of test coverage pose a growing risk to release velocity, and a refactor has been planned."
+    },
+    {
+      "question": "How's customer retention trending?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Overall customer retention is slipping slightly\u2014net revenue retention fell to 108% this quarter from 112% in Q2\u2014while enterprise net revenue retention stayed strong at 121% and SMB churn has risen."
+    },
+    {
+      "question": "Why was the database migration delayed from its original Q2 target?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The migration slipped because the planned Q2 timeline was pushed back by visa\u2011processing delays for two senior backend engineers, and a dry\u2011run of the migration revealed replication\u2011lag problems that required additional work, resulting in a six\u2011week delay."
+    },
+    {
+      "question": "Do the two Q3 financial reports agree on total revenue?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes; both reports state that Q3 total revenue was\u202f$4.2\u202fmillion."
+    },
+    {
+      "question": "How does the new analytics feature relate to the rise in cloud infrastructure costs?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The rise in cloud infrastructure costs was driven in part by the new analytics dashboard feature, which required additional compute resources and increased usage, thereby raising the quarter\u2019s cloud spend."
+    },
+    {
+      "question": "Do the operating expense figures match between the financial summary and the business review?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes\u2014they both report total operating expenses of\u202f$2.1\u202fmillion."
+    },
+    {
+      "question": "What was Q2 revenue?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don't have that information in the indexed documents."
+    },
+    {
+      "question": "What is 1+1?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "general_knowledge",
+      "attempts": 0,
+      "answer": "2."
+    },
+    {
+      "question": "How many trophies has CSK won?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "general_knowledge",
+      "attempts": 0,
+      "answer": "Chennai Super Kings have won\u202f5 IPL titles (2010,\u202f2011,\u202f2018,\u202f2021,\u202f2023) and 2 Champions\u202fLeague\u202fT20 titles, for a total of\u202f7 major trophies."
+    },
+    {
+      "question": "What is the company's current stock price?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don\u2019t have that information in the provided documents."
+    },
+    {
+      "question": "Who is the CEO of the company?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don't have that information."
+    },
+    {
+      "question": "What was the company's revenue two years ago?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don\u2019t have that information."
+    },
+    {
+      "question": "What month did the security incident occur?",
+      "category": "exact_figure",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The security incident occurred in September."
+    },
+    {
+      "question": "How many enterprise customers participated in the analytics dashboard beta?",
+      "category": "exact_figure",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "40 enterprise customers participated in the analytics dashboard beta."
+    },
+    {
+      "question": "What was the average enterprise contract value after the price increase?",
+      "category": "exact_figure",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The average enterprise contract value after the price increase was\u202f$168,000."
+    },
+    {
+      "question": "Is engineering headcount consistent between the business review and the infrastructure report?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes; both documents report engineering headcount as 58."
     }
   ]
 }

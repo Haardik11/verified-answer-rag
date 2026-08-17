@@ -30,6 +30,7 @@ from app.agent.verify import verify_answer
 from app.models.llm_router import call_llm
 from app.retrieval.hybrid import hybrid_search
 from app.retrieval.vector_store import RetrievedChunk
+from app.text_utils import normalize_text
 
 ROUTER_PROMPT = (
     "Classify the user's message as exactly one word.\n"
@@ -142,7 +143,8 @@ def synthesize(state: AgentState) -> dict:
         {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {state['question']}"},
     ]
     answer = call_llm(role="synthesizer", messages=messages)
-    return {"answer": answer, "is_refusal": answer.strip().lower().startswith(REFUSAL_PREFIX)}
+    is_refusal = normalize_text(answer).strip().lower().startswith(REFUSAL_PREFIX)
+    return {"answer": answer, "is_refusal": is_refusal}
 
 
 def verify(state: AgentState) -> dict:

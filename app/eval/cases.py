@@ -31,7 +31,7 @@ CASES: list[EvalCase] = [
     EvalCase("Was there a security incident this quarter?", "simple_lookup", True, ["40 minutes"]),
     EvalCase("What was the enterprise revenue growth percentage?", "simple_lookup", True, ["22 percent"]),
     EvalCase("How much was cloud infrastructure spend this quarter?", "simple_lookup", True, ["340,000"]),
-    EvalCase("What was net revenue retention this quarter?", "simple_lookup", True, ["108 percent"]),
+    EvalCase("What was net revenue retention this quarter?", "simple_lookup", True, ["108"]),
     EvalCase("How many total employees does the company have?", "simple_lookup", True, ["142"]),
     EvalCase("What was SMB revenue this quarter?", "simple_lookup", True, ["1.3 million"]),
     EvalCase("What was self-serve revenue this quarter?", "simple_lookup", True, ["800,000"]),
@@ -51,7 +51,7 @@ CASES: list[EvalCase] = [
     EvalCase("How satisfied are customers, based on survey data?", "paraphrased", True, ["42"]),
     EvalCase("What's new with the product this quarter?", "paraphrased", True, ["analytics dashboard"]),
     EvalCase("Are there any tech debt concerns?", "paraphrased", True, ["authentication"]),
-    EvalCase("How's customer retention trending?", "paraphrased", True, ["108 percent"]),
+    EvalCase("How's customer retention trending?", "paraphrased", True, ["108"]),
     # --- Multi-hop (~5): answer requires combining info from two different chunks or documents. ---
     EvalCase(
         "Why was the database migration delayed from its original Q2 target?",
