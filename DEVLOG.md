@@ -565,3 +565,36 @@ escape text instead of literal characters, verified against actual
 `chr()` code points afterward, not just eyeballed. Small thing, but a
 good example of why I check my own edits instead of assuming a rewrite
 that "looks right" actually is.
+
+## 33. Baseline ablation finished: 39/39, and what it actually shows
+Finished the comparison from step 31 - ran the remaining cases across
+several passes as quota allowed, ending at a genuine 39/39 with
+verification disabled entirely.
+
+Baseline result: 1 failure out of 39. Every `paraphrased`, `multi_hop`,
+`unanswerable`, and `exact_figure` case passed cleanly with no
+verification running at all. The one failure was the same security-
+incident question from earlier in this log - the answer correctly said
+there was an incident but left out the 40-minute duration. With
+verification on, the same question gets the complete answer.
+
+Being precise about what this does and doesn't show, since it's easy to
+overstate a result like this: this is not a hallucination fix. The
+baseline never invented a false fact anywhere in 39 cases - not once,
+across every category, including all 6 adversarial/unanswerable
+questions where a weaker system would be expected to guess. What it
+found is a completeness gap: one specific case where the model, on its
+own, gave an accurate but incomplete answer, and the verifier caught the
+missing detail and drove a retry that filled it in. That's a real,
+useful thing for the verifier to do - but it's a different claim than
+"reduces hallucination," and I'd rather describe it as what it actually
+is than round it up to something punchier.
+
+Also not turning "1 case out of 39" into a percentage comparison
+("2.6% -> 0%"). On a sample this size that's not a stable rate, it's one
+specific case - stating it as a rate implies more statistical weight than
+a single data point actually carries. The honest, defensible version:
+a controlled before/after comparison across 39 cases surfaced exactly
+one gap (an incomplete answer, not a fabricated one), and the verifier
+loop closed it. That's a real result and it doesn't need to be
+inflated into a rate to be worth having.
