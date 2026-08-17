@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-08-17T17:05:58.965178+00:00",
+  "timestamp": "2026-08-17T20:29:30.862217+00:00",
   "condition": "verification_disabled_baseline",
   "total_cases_defined": 39,
-  "total_cases_scored": 24,
+  "total_cases_scored": 36,
   "hallucinated_count": 1,
-  "hallucination_rate_percent": 4.2,
+  "hallucination_rate_percent": 2.8,
   "by_category": {
     "simple_lookup": {
       "total": 15,
@@ -12,7 +12,17 @@
       "rate_percent": 6.7
     },
     "paraphrased": {
-      "total": 9,
+      "total": 10,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "multi_hop": {
+      "total": 5,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "unanswerable": {
+      "total": 6,
       "hallucinated": 0,
       "rate_percent": 0.0
     }
@@ -257,6 +267,126 @@
       "route_type": "document",
       "attempts": 0,
       "answer": "Yes. A technical\u2011debt audit in July flagged the monolithic authentication service\u2014lacking test coverage\u2014as a high\u2011priority risk to release velocity, and a two\u2011engineer team was assigned to refactor it in Q4."
+    },
+    {
+      "question": "How's customer retention trending?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Customer retention has slipped slightly\u2014net revenue retention fell to 108\u202f% this quarter from 112\u202f% in Q2\u2014though enterprise net revenue retention stayed strong at 121\u202f% and overall retention remains above 100\u202f%."
+    },
+    {
+      "question": "Why was the database migration delayed from its original Q2 target?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The migration slipped because the two senior backend engineers who were supposed to help with it were delayed by visa processing, and a dry\u2011run in staging uncovered replication\u2011lag problems that required additional work, pushing the cut\u2011over from its original Q2 schedule."
+    },
+    {
+      "question": "Do the two Q3 financial reports agree on total revenue?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes; both reports state that Q3 total revenue was\u202f$4.2\u202fmillion."
+    },
+    {
+      "question": "Is engineering headcount consistent between the business review and the infrastructure report?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes; both documents report an engineering headcount of 58."
+    },
+    {
+      "question": "How does the new analytics feature relate to the rise in cloud infrastructure costs?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The rise in cloud infrastructure costs was driven in part by the new analytics dashboard feature, which consumes significantly more compute resources than the core product; the additional processing required for this feature increased overall cloud usage, contributing to the higher quarterly spend."
+    },
+    {
+      "question": "Do the operating expense figures match between the financial summary and the business review?",
+      "category": "multi_hop",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes\u2014they both report operating expenses of\u202f$2.1\u202fmillion."
+    },
+    {
+      "question": "What was Q2 revenue?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don\u2019t have that information in the provided documents."
+    },
+    {
+      "question": "What is 1+1?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "general_knowledge",
+      "attempts": 0,
+      "answer": "2."
+    },
+    {
+      "question": "How many trophies has CSK won?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "general_knowledge",
+      "attempts": 0,
+      "answer": "Chennai Super Kings have won\u202f5\u202fIPL titles (2010,\u202f2011,\u202f2018,\u202f2021,\u202f2023) and\u202f2\u202fChampions\u202fLeague\u202fT20 titles (2010,\u202f2014) \u2013 a total of\u202f7\u202fmajor trophies."
+    },
+    {
+      "question": "What is the company's current stock price?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don't have that information."
+    },
+    {
+      "question": "Who is the CEO of the company?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don\u2019t have that information in the provided documents."
+    },
+    {
+      "question": "What was the company's revenue two years ago?",
+      "category": "unanswerable",
+      "should_be_answerable": false,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "I don\u2019t have that information in the provided documents."
     }
   ]
 }
