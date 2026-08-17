@@ -625,3 +625,39 @@ agent's actual answers were correct in all 11 originally-flagged cases;
 only the scoring had bugs. Still worth remembering for any future
 discussion of this number: 39 cases is a real but modest sample size,
 not a large-scale statistical benchmark.
+
+## 30. Spot-checking historical fixes against the new model, and a real router miss
+Switching models (step 28) is exactly the kind of change that deserves
+re-checking known-risky scenarios directly, not just trusting the clean
+aggregate eval number - so re-ran three of the session's earlier bug
+cases specifically against `openai/gpt-oss-120b`.
+
+Two turned out fine on inspection: the citation-mislabeling test (step
+15) initially looked like a regression (verifier said `Verified` when a
+fake "according to the text file" answer was fed in), but checking the
+actual retrieved chunk showed `data/sample_large.txt` genuinely contains
+that phrase now (added in step 17) - the exact same "stale test premise"
+situation as the step 19 false alarm, not a real regression. The strict
+refusal behavior (step 21) also held: an unambiguous Q2 revenue question
+got a clean, honest refusal, no hallucinated calculation.
+
+One was a real, new issue: "tell me about q2" got classified
+`GENERAL_KNOWLEDGE` and answered with a generic dictionary definition of
+what a fiscal quarter is, instead of checking the documents - different
+behavior from the old model, which reliably routed this to document
+search. Root cause: `ROUTER_PROMPT` only told the model to route to
+general knowledge when a question was "unrelated" to business documents,
+without weighting *which way to guess* on genuinely ambiguous phrasing -
+for a tool whose entire indexed content is a company's quarterly
+reports, "Q2" is not a neutral topic, it's core subject matter.
+
+Fixed by rewriting the prompt to explicitly bias ambiguous-but-plausible
+business references toward `DOCUMENT_QUESTION` ("when in doubt... it's
+much better to search and correctly report nothing relevant was found
+than to skip a question that might be answerable"), while keeping
+`GENERAL_KNOWLEDGE` reserved for messages with no plausible connection to
+business content at all. Verified: "tell me about q2" now correctly
+routes to the document path and honestly refuses, while the two genuine
+general-knowledge control cases (1+1, CSK trophies) still correctly
+route to `GENERAL_KNOWLEDGE` - confirming the fix was targeted, not an
+overcorrection that would misroute everything to document search.

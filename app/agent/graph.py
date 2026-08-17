@@ -34,11 +34,17 @@ from app.text_utils import normalize_text
 
 ROUTER_PROMPT = (
     "Classify the user's message as exactly one word.\n"
-    "DOCUMENT_QUESTION - a real question that should be answered by looking up indexed documents.\n"
+    "DOCUMENT_QUESTION - a real question that could plausibly be answered by the indexed business "
+    "documents (financial reports, quarterly metrics, company operations, etc.) - this includes vague "
+    "or short references to business topics (a quarter like 'Q2', revenue, headcount, expenses, and "
+    "similar), even if the phrasing doesn't explicitly say 'in our documents' or name the company. "
+    "When a message is ambiguous but has any plausible connection to business/company topics, choose "
+    "this - it's much better to search the documents and correctly report nothing relevant was found "
+    "than to skip a question that might actually be answerable.\n"
     "CHITCHAT - a greeting, thanks, or general conversation that doesn't need document lookup.\n"
-    "GENERAL_KNOWLEDGE - a real question, but one answerable from well-known common knowledge "
-    "(basic arithmetic, common facts) that obviously has nothing to do with indexed business "
-    "documents, so looking them up would be pointless.\n"
+    "GENERAL_KNOWLEDGE - a real question that is CLEARLY unrelated to business/company documents, with "
+    "no plausible connection to the kind of content these documents contain (basic arithmetic, sports "
+    "trivia, general facts about the world).\n"
     "Respond with only that one word, nothing else."
 )
 
