@@ -1,15 +1,20 @@
 {
-  "timestamp": "2026-08-17T11:33:40.723944+00:00",
+  "timestamp": "2026-08-17T15:28:54.323174+00:00",
   "condition": "verification_disabled_baseline",
   "total_cases_defined": 39,
-  "total_cases_scored": 9,
+  "total_cases_scored": 20,
   "hallucinated_count": 1,
-  "hallucination_rate_percent": 11.1,
+  "hallucination_rate_percent": 5.0,
   "by_category": {
     "simple_lookup": {
-      "total": 9,
+      "total": 15,
       "hallucinated": 1,
-      "rate_percent": 11.1
+      "rate_percent": 6.7
+    },
+    "paraphrased": {
+      "total": 5,
+      "hallucinated": 0,
+      "rate_percent": 0.0
     }
   },
   "cases": [
@@ -102,6 +107,116 @@
       "route_type": "document",
       "attempts": 0,
       "answer": "Self\u2011serve revenue this quarter was\u202f$800,000."
+    },
+    {
+      "question": "What was the cost of goods sold?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The cost of goods sold was\u202f$620,000."
+    },
+    {
+      "question": "What was research and development spend?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The research and development spend was\u202f$740,000."
+    },
+    {
+      "question": "What was the net promoter score?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The net promoter score was 42."
+    },
+    {
+      "question": "How much cash did the company have at quarter end?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company ended the quarter with\u202f$18.4\u202fmillion in cash and cash equivalents."
+    },
+    {
+      "question": "What was the core API uptime this quarter?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The core API uptime this quarter was 99.94\u202fpercent."
+    },
+    {
+      "question": "How many events does the analytics pipeline process per day?",
+      "category": "simple_lookup",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The analytics pipeline processes roughly\u202f40\u202fmillion events per day."
+    },
+    {
+      "question": "How much money did the company make in Q3?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company generated\u202f$4.2\u202fmillion in revenue during Q3."
+    },
+    {
+      "question": "Why did expenses stay flat this quarter?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Expenses stayed flat because headcount was stable\u2014no net new hires were made in engineering, sales, or other teams\u2014so payroll and related costs did not increase."
+    },
+    {
+      "question": "Did anything go wrong security-wise recently?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "Yes. In early September a misconfigured access\u2011control rule briefly exposed a subset of internal analytics dashboards without authentication for about 40\u202fminutes; the issue was detected by automated monitoring, rolled back, and an automated pre\u2011deploy check was added afterward. No other security incidents meeting the internal disclosure threshold occurred during the quarter."
+    },
+    {
+      "question": "How big is the engineering team?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The engineering team consists of 58 members."
+    },
+    {
+      "question": "How's the company's cash position looking?",
+      "category": "paraphrased",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The company ended the quarter with\u202f$18.4\u202fmillion in cash and cash equivalents, which provides roughly\u202f22\u202fmonths of runway at its current burn rate."
     }
   ]
 }
