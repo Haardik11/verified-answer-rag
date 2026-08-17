@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-08-17T20:29:30.862217+00:00",
+  "timestamp": "2026-08-17T22:22:12.569793+00:00",
   "condition": "verification_disabled_baseline",
   "total_cases_defined": 39,
-  "total_cases_scored": 36,
+  "total_cases_scored": 39,
   "hallucinated_count": 1,
-  "hallucination_rate_percent": 2.8,
+  "hallucination_rate_percent": 2.6,
   "by_category": {
     "simple_lookup": {
       "total": 15,
@@ -23,6 +23,11 @@
     },
     "unanswerable": {
       "total": 6,
+      "hallucinated": 0,
+      "rate_percent": 0.0
+    },
+    "exact_figure": {
+      "total": 3,
       "hallucinated": 0,
       "rate_percent": 0.0
     }
@@ -387,6 +392,36 @@
       "route_type": "document",
       "attempts": 0,
       "answer": "I don\u2019t have that information in the provided documents."
+    },
+    {
+      "question": "What month did the security incident occur?",
+      "category": "exact_figure",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The security incident occurred in September."
+    },
+    {
+      "question": "How many enterprise customers participated in the analytics dashboard beta?",
+      "category": "exact_figure",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "40 enterprise customers participated in the analytics dashboard beta."
+    },
+    {
+      "question": "What was the average enterprise contract value after the price increase?",
+      "category": "exact_figure",
+      "should_be_answerable": true,
+      "hallucinated": false,
+      "failure_reason": "",
+      "route_type": "document",
+      "attempts": 0,
+      "answer": "The average enterprise contract value after the price increase was\u202f$168,000."
     }
   ]
 }
