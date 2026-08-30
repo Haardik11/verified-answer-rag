@@ -1,0 +1,152 @@
+[
+  {
+    "question": "What was Q3 revenue?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "How many employees does the company have?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "Tell me about the security incident",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "What's the NPS score?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "How much did we spend on cloud infrastructure?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "What's driving up operating expenses?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "Is the platform reliable?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "How's customer retention trending?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "What happened with the database migration?",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "Give me the SMB numbers",
+    "expected": "document",
+    "predicted": "document"
+  },
+  {
+    "question": "hi",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "hello there",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "thanks!",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "thank you so much",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "good morning",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "how are you",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "what can you do",
+    "expected": "chitchat",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "who are you",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "bye",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "see you later",
+    "expected": "chitchat",
+    "predicted": "chitchat"
+  },
+  {
+    "question": "What is 1+1?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "How many trophies has CSK won?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "What's the capital of France?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "Who wrote Romeo and Juliet?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "What's the boiling point of water?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "How many continents are there?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "What year did WW2 end?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "Who is the president of the United States?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "What's the speed of light?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  },
+  {
+    "question": "How tall is Mount Everest?",
+    "expected": "general_knowledge",
+    "predicted": "general_knowledge"
+  }
+]
