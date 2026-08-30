@@ -1,0 +1,45 @@
+{
+  "script": "scripts/retrieval_metrics.py",
+  "description": "Hit Rate@k comparing hybrid_search() (dense+BM25+RRF) against dense_search() (Qdrant-alone) on the 33 of 39 eval cases that are answerable with a defined expected keyword (unanswerable cases excluded - no fact to check retrieval against). A hit means every expected keyword for that case appears somewhere in the top-k retrieved chunks, checked before any LLM synthesis happens.",
+  "eligible_cases": 33,
+  "total_cases_in_suite": 39,
+  "by_top_k": {
+    "1": {
+      "hybrid": { "hits": 28, "total": 33, "rate_percent": 84.8 },
+      "dense_only": { "hits": 25, "total": 33, "rate_percent": 75.8 },
+      "differing_cases": [
+        { "category": "simple_lookup", "question": "What was the enterprise revenue growth percentage?", "hybrid_hit": true, "dense_only_hit": false },
+        { "category": "simple_lookup", "question": "What was SMB revenue this quarter?", "hybrid_hit": true, "dense_only_hit": false },
+        { "category": "paraphrased", "question": "Why did expenses stay flat this quarter?", "hybrid_hit": true, "dense_only_hit": false }
+      ]
+    },
+    "2": {
+      "hybrid": { "hits": 28, "total": 33, "rate_percent": 84.8 },
+      "dense_only": { "hits": 31, "total": 33, "rate_percent": 93.9 },
+      "differing_cases": [
+        { "category": "simple_lookup", "question": "What was net revenue retention this quarter?", "hybrid_hit": true, "dense_only_hit": false },
+        { "category": "paraphrased", "question": "How big is the engineering team?", "hybrid_hit": false, "dense_only_hit": true },
+        { "category": "paraphrased", "question": "Is the platform reliable?", "hybrid_hit": false, "dense_only_hit": true },
+        { "category": "multi_hop", "question": "Why was the database migration delayed from its original Q2 target?", "hybrid_hit": false, "dense_only_hit": true },
+        { "category": "multi_hop", "question": "Is engineering headcount consistent between the business review and the infrastructure report?", "hybrid_hit": false, "dense_only_hit": true }
+      ]
+    },
+    "3": {
+      "hybrid": { "hits": 30, "total": 33, "rate_percent": 90.9 },
+      "dense_only": { "hits": 32, "total": 33, "rate_percent": 97.0 },
+      "differing_cases": [
+        { "category": "paraphrased", "question": "How much money did the company make in Q3?", "hybrid_hit": false, "dense_only_hit": true },
+        { "category": "paraphrased", "question": "How big is the engineering team?", "hybrid_hit": false, "dense_only_hit": true },
+        { "category": "paraphrased", "question": "Is the platform reliable?", "hybrid_hit": false, "dense_only_hit": true },
+        { "category": "paraphrased", "question": "Are there any tech debt concerns?", "hybrid_hit": true, "dense_only_hit": false }
+      ]
+    },
+    "5": {
+      "hybrid": { "hits": 33, "total": 33, "rate_percent": 100.0 },
+      "dense_only": { "hits": 33, "total": 33, "rate_percent": 100.0 },
+      "differing_cases": []
+    }
+  },
+  "note": "Production uses top_k=5 (app/agent/graph.py), where hybrid and dense-only tie at 100%. At tighter k the two methods trade wins and losses with no consistent winner - see conversation for the follow-up investigation into whether a test set designed to favor hybrid changes this.",
+  "run_at": "this was run once during the 2026-08-30 session; not re-run since, numbers transcribed here from that run's actual terminal output"
+}

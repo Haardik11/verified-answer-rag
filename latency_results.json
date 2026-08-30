@@ -1,0 +1,39 @@
+{
+  "script": "scripts/latency_bench.py",
+  "description": "Real end-to-end answer_question() timings, production config (with_verification=True). Full category run for multi_hop/unanswerable/exact_figure, n=5 sample for simple_lookup/paraphrased to limit quota spend. Any case that failed verification and triggered a rewrite-and-retry (attempts=1) roughly doubles that case's latency.",
+  "cases": [
+    { "category": "simple_lookup", "question": "What was Q3 revenue?", "seconds": 17.26, "attempts": 0, "route_type": "document" },
+    { "category": "simple_lookup", "question": "What is driving the operating expenses this quarter?", "seconds": 21.97, "attempts": 0, "route_type": "document" },
+    { "category": "simple_lookup", "question": "Was there a security incident this quarter?", "seconds": 28.33, "attempts": 0, "route_type": "document" },
+    { "category": "simple_lookup", "question": "What was the enterprise revenue growth percentage?", "seconds": 29.46, "attempts": 0, "route_type": "document" },
+    { "category": "simple_lookup", "question": "How much was cloud infrastructure spend this quarter?", "seconds": 33.14, "attempts": 0, "route_type": "document" },
+    { "category": "paraphrased", "question": "How much money did the company make in Q3?", "seconds": 34.08, "attempts": 0, "route_type": "document" },
+    { "category": "paraphrased", "question": "Why did expenses stay flat this quarter?", "seconds": 62.31, "attempts": 1, "route_type": "document" },
+    { "category": "paraphrased", "question": "Did anything go wrong security-wise recently?", "seconds": 35.26, "attempts": 0, "route_type": "document" },
+    { "category": "paraphrased", "question": "How big is the engineering team?", "seconds": 32.65, "attempts": 0, "route_type": "document" },
+    { "category": "paraphrased", "question": "How's the company's cash position looking?", "seconds": 25.84, "attempts": 0, "route_type": "document" },
+    { "category": "multi_hop", "question": "Why was the database migration delayed from its original Q2 target?", "seconds": 36.26, "attempts": 0, "route_type": "document" },
+    { "category": "multi_hop", "question": "Do the two Q3 financial reports agree on total revenue?", "seconds": 30.84, "attempts": 0, "route_type": "document" },
+    { "category": "multi_hop", "question": "Is engineering headcount consistent between the business review and the infrastructure report?", "seconds": 22.90, "attempts": 0, "route_type": "document" },
+    { "category": "multi_hop", "question": "How does the new analytics feature relate to the rise in cloud infrastructure costs?", "seconds": 33.41, "attempts": 0, "route_type": "document" },
+    { "category": "multi_hop", "question": "Do the operating expense figures match between the financial summary and the business review?", "seconds": 67.37, "attempts": 1, "route_type": "document" },
+    { "category": "unanswerable", "question": "What was Q2 revenue?", "seconds": 18.18, "attempts": 0, "route_type": "document" },
+    { "category": "unanswerable", "question": "What is 1+1?", "seconds": 1.36, "attempts": 0, "route_type": "general_knowledge" },
+    { "category": "unanswerable", "question": "How many trophies has CSK won?", "seconds": 1.84, "attempts": 0, "route_type": "general_knowledge" },
+    { "category": "unanswerable", "question": "What is the company's current stock price?", "seconds": 34.29, "attempts": 0, "route_type": "document" },
+    { "category": "unanswerable", "question": "Who is the CEO of the company?", "seconds": 68.42, "attempts": 1, "route_type": "document" },
+    { "category": "unanswerable", "question": "What was the company's revenue two years ago?", "seconds": 26.87, "attempts": 0, "route_type": "document" },
+    { "category": "exact_figure", "question": "What month did the security incident occur?", "seconds": 33.04, "attempts": 0, "route_type": "document" },
+    { "category": "exact_figure", "question": "How many enterprise customers participated in the analytics dashboard beta?", "seconds": 28.87, "attempts": 0, "route_type": "document" },
+    { "category": "exact_figure", "question": "What was the average enterprise contract value after the price increase?", "seconds": 29.28, "attempts": 0, "route_type": "document" }
+  ],
+  "by_category_avg_seconds": {
+    "simple_lookup": 26.03,
+    "paraphrased": 38.03,
+    "multi_hop": 38.15,
+    "unanswerable": 25.16,
+    "exact_figure": 30.39
+  },
+  "overall_avg_seconds": 31.38,
+  "overall_n": 24
+}
