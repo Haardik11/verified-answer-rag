@@ -1,0 +1,20 @@
+{
+  "script": "scripts/retrieval_hybrid_targeted.py",
+  "description": "Follow-up to retrieval_metrics_results.json, which found hybrid and dense-only tied at 100% hit rate@5 on the original 39-case eval set with no consistent winner at smaller k. This tests whether that's because the corpus lacks queries where BM25 should matter, using 7 new queries against data/sample_expenses.csv (indexed as one chunk of 14 near-identical templated rows differing mainly in an exact month token), competing against a separate PDF paragraph that discusses the same topic in prose without naming a specific month.",
+  "queries": [
+    { "question": "How much was spent on cloud infrastructure in July?", "expects": "102000" },
+    { "question": "How much was spent on cloud infrastructure in September?", "expects": "120000" },
+    { "question": "What was the marketing campaign spend in August?", "expects": "140000" },
+    { "question": "What was the marketing campaign spend in September?", "expects": "58000" },
+    { "question": "How much were sales salaries in July?", "expects": "290000" },
+    { "question": "How much did engineering salaries cost in August?", "expects": "412000" },
+    { "question": "How much was the office equipment expense?", "expects": "22000" }
+  ],
+  "by_top_k": {
+    "1": { "hybrid": { "hits": 4, "total": 7, "rate_percent": 57.1 }, "dense_only": { "hits": 3, "total": 7, "rate_percent": 42.9 } },
+    "2": { "hybrid": { "hits": 5, "total": 7, "rate_percent": 71.4 }, "dense_only": { "hits": 5, "total": 7, "rate_percent": 71.4 } },
+    "3": { "hybrid": { "hits": 7, "total": 7, "rate_percent": 100.0 }, "dense_only": { "hits": 5, "total": 7, "rate_percent": 71.4 } },
+    "5": { "hybrid": { "hits": 7, "total": 7, "rate_percent": 100.0 }, "dense_only": { "hits": 7, "total": 7, "rate_percent": 100.0 } }
+  },
+  "conclusion": "A real, repeatable gap exists at top_k=3 (100% vs 71.4%) on queries designed to require exact-token disambiguation between near-duplicate content. The gap disappears at top_k=5 because the corpus only has 14 chunks total, so k=5 retrieves over a third of everything regardless of ranking quality. This is a narrower and more honest claim than 'hybrid improves retrieval' generally: it holds specifically for exact-match-dependent queries at tight k, not as a blanket improvement."
+}

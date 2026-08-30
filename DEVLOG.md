@@ -598,3 +598,58 @@ a controlled before/after comparison across 39 cases surfaced exactly
 one gap (an incomplete answer, not a fabricated one), and the verifier
 loop closed it. That's a real result and it doesn't need to be
 inflated into a rate to be worth having.
+
+## 34. Two numbers I hadn't actually measured, and one bug found by measuring
+
+Went back and asked whether a few other pipeline claims had ever really
+been benchmarked or were just assumed to be true. Two hadn't: hybrid vs
+dense-only retrieval quality, and OCR accuracy on a scanned page. Measuring
+both properly turned up a real bug and a more honest version of a claim I
+was about to make.
+
+**Retrieval.** Ran hybrid search and dense-only search side by side on the
+39-case eval set (33 of them have a defined expected fact) at several
+top_k values. At top_k=5 - what the app actually uses - both tied at 100%
+hit rate. At tighter k they traded wins and losses with no consistent
+winner. My first reaction was to conclude hybrid isn't contributing
+anything, but that didn't sit right, since RRF fusion is real and correctly
+implemented - so before writing that down I checked whether the test set
+itself was the problem. It was. The whole corpus is only 14 chunks, and
+none of the 39 cases actually need an exact keyword to win over a
+semantically-similar-but-wrong chunk. `data/sample_expenses.csv` indexes
+as one chunk of 14 near-identical rows ("Month: X, Category: Y, Amount
+USD: Z") where Cloud Infrastructure and Marketing Campaigns each repeat
+three times, once per month, differing only in the exact month name and
+number - exactly the situation dense embeddings handle badly, since all
+three rows are semantically almost the same sentence. Wrote 7 new queries
+that specifically ask for one month's figure, competing against a separate
+PDF paragraph that discusses the same topic in prose without naming a
+month. Real result: hybrid 100% (7/7) vs dense-only 71.4% (5/7) at
+top_k=3. That's the actual, honest version of "hybrid retrieval helps" -
+narrower than I'd have guessed going in, tied to exact-match disambiguation
+specifically, and it took writing the right test to see it rather than
+trusting the original 39 cases to cover it.
+
+**OCR.** Ran the vision-OCR path against the scanned test page four times
+and got the correct transcription three times and a garbled duplicate
+(the model restated the first line, then continued into a second, mangled
+attempt at the same text) once - a real, non-cherry-picked bug, not
+something I introduced by testing wrong. Assumed it was sampling
+randomness, since the role was running at the default temperature (0.2).
+Set it to 0.0 to test that theory and reran all four - and got the exact
+same duplication, byte-for-byte, in all four runs. That's the opposite of
+what a randomness fix should do, and it proved the theory wrong: this is a
+deterministic bias in the model on this image, not noise. An explicit
+"don't repeat yourself" prompt instruction didn't stop it either. Neither
+of the two standard levers worked, so I didn't pretend one of them had.
+
+What actually fixed the observed output: detecting the exact failure
+signature (a non-empty line reappearing verbatim later in the response)
+and truncating everything from that point on, since in every run so far
+everything after the repeat was garbage. Reran four times with that in
+place - 0% word error rate on all four. Worth being clear about what this
+is and isn't: it's a real fix for the output of this specific, observed
+failure pattern, not a fix for whatever makes the model do this in the
+first place, and it wouldn't catch a repeat that wasn't an exact line
+match. Documenting it as a known mitigation for a known bug rather than
+quietly calling OCR "accurate" now that the number looks clean.

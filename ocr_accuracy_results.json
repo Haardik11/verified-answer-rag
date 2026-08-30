@@ -2,33 +2,19 @@
   "script": "scripts/ocr_accuracy.py",
   "description": "Word Error Rate of app.ingestion.vision.ocr_image against data/sample_scanned.pdf, page 1. No ground-truth text file existed anywhere in the repo before this session - it was established by rendering the page and reading it directly, since the fixture was a generated image with no text layer.",
   "ground_truth": "Q3 Facilities Report The Austin office lease was renewed for 3 more years. Total facilities spend for the quarter was 95,000 dollars.",
-  "runs": [
-    {
-      "run": 1,
-      "raw_output": "Q3 Facilities Report\nThe Austin office lease was renewed for 3 more years.\nTotal facilities spend for the quarter was 95,000 dollars.\nQ3 Facilities Report\nThe Austin office lease wa\nTotal facilities spend for th\nas renewed for 3 more years\nhe quarter was 95,000 dollars\n.\ns.",
-      "word_error_rate_percent": 118.2,
-      "edits": { "total": 26, "substitutions": 0, "insertions": 26, "deletions": 0 },
-      "note": "correct transcription followed by a second, garbled/truncated duplicate of the same text"
-    },
-    {
-      "run": 2,
-      "raw_output": "Q3 Facilities Report\n\nThe Austin office lease was renewed for 3 more years.\nTotal facilities spend for the quarter was 95,000 dollars.",
-      "word_error_rate_percent": 0.0,
-      "edits": { "total": 0, "substitutions": 0, "insertions": 0, "deletions": 0 }
-    },
-    {
-      "run": 3,
-      "raw_output": "Q3 Facilities Report\n\nThe Austin office lease was renewed for 3 more years.\nTotal facilities spend for the quarter was 95,000 dollars.",
-      "word_error_rate_percent": 0.0,
-      "edits": { "total": 0, "substitutions": 0, "insertions": 0, "deletions": 0 }
-    },
-    {
-      "run": 4,
-      "raw_output": "Q3 Facilities Report\nThe Austin office lease was renewed for 3 more years.\nTotal facilities spend for the quarter was 95,000 dollars.",
-      "word_error_rate_percent": 0.0,
-      "edits": { "total": 0, "substitutions": 0, "insertions": 0, "deletions": 0 }
-    }
-  ],
-  "average_word_error_rate_percent": 29.5,
-  "n_runs": 4
+  "before_fix": {
+    "description": "Original 4 runs at the (then-)default temperature=0.2, no line-repetition safeguard. 3/4 clean, 1/4 hit a duplication bug (model restated line 1 verbatim, then continued into a second, garbled attempt).",
+    "runs_word_error_rate_percent": [118.2, 0.0, 0.0, 0.0],
+    "average_word_error_rate_percent": 29.5
+  },
+  "temperature_0_investigation": {
+    "description": "Hypothesis: the duplication was sampling randomness, fixable by setting temperature=0.0. Tested by rerunning 4 trials at temperature=0.0 with no other change. Result disproved the hypothesis: all 4 runs produced the exact same duplication byte-for-byte - a deterministic model bias, not noise. An added 'do not repeat yourself' prompt instruction also did not stop it. Neither fix worked at the model/prompt level.",
+    "runs_word_error_rate_percent": [118.2, 118.2, 118.2, 118.2],
+    "average_word_error_rate_percent": 118.2
+  },
+  "after_line_truncation_safeguard": {
+    "description": "app.ingestion.vision._truncate_at_repeated_line() detects an exact repeated non-empty line in the output and truncates from that point on, since every observed failure has everything after the repeat be garbage. This is a mitigation for the observed failure signature, not a fix for why the model duplicates - it would not catch a repeat that isn't an exact line match.",
+    "runs_word_error_rate_percent": [0.0, 0.0, 0.0, 0.0],
+    "average_word_error_rate_percent": 0.0
+  }
 }
