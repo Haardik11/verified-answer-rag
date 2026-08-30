@@ -216,10 +216,10 @@ Chat interface hitting `/ask`. Message bubbles, a Verified/Unverified
 badge tied to the real `grounded` field, a collapsible sources panel, and
 a relevant-excerpt highlighter (`lib/excerpt.ts`) that finds the
 best-matching sentence in a chunk by keyword overlap instead of just
-cutting off text arbitrarily. Later added a ChatGPT-style sidebar
-(multiple chats, saved to `localStorage`) and redid the whole visual
-style — warm Claude.ai-ish palette with `framer-motion` animations —
-after the first dark-theme pass felt flat.
+cutting off text arbitrarily. Later added a sidebar for multiple saved
+chats (persisted to `localStorage`) and redid the whole visual style —
+a warm cream-and-coral palette with `framer-motion` animations — after
+the first dark-theme pass felt flat.
 
 ## 17. Larger sample documents
 Added `data/sample_large.txt` and `data/sample_large.pdf` (~900 words

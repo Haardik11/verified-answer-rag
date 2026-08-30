@@ -1,7 +1,7 @@
 """
 Hand-written test cases with ground truth verified directly against the
-indexed documents (see the source files in data/), not guessed or
-LLM-generated without checking. Organized into categories that each stress
+indexed documents (see the source files in data/), not guessed or assumed
+correct without checking. Organized into categories that each stress
 a different part of the pipeline, rather than one flat list of similar
 lookups - a system that aces simple lookups can still fail badly on
 paraphrased or multi-hop questions, so reporting hallucination rate per
