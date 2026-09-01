@@ -653,3 +653,38 @@ failure pattern, not a fix for whatever makes the model do this in the
 first place, and it wouldn't catch a repeat that wasn't an exact line
 match. Documenting it as a known mitigation for a known bug rather than
 quietly calling OCR "accurate" now that the number looks clean.
+
+## 35. Dockerizing the backend and frontend
+
+Wrote a `Dockerfile` for the backend (Python 3.12-slim, installs
+`requirements.txt`, copies `app/`, `scripts/`, `data/`), a multi-stage
+`frontend/Dockerfile` (Node to build the Vite app, then nginx to serve the
+static output), and a `docker-compose.yml` wiring both together with a
+named volume for `data/qdrant` so the index survives container restarts.
+`docker-entrypoint.sh` checks whether the volume already has an index and
+builds one from the sample documents if not, so a fresh container is
+usable immediately instead of needing a manual setup step.
+
+Didn't have Docker installed on this machine at all, so getting to a real
+test meant: installing Docker Desktop, discovering it needs WSL2 as its
+Linux backend on Windows, installing WSL2, hitting a second wall
+(virtualization/Virtual Machine Platform not enabled), enabling that, and
+a full restart before the engine would actually come up. Worth writing
+down since none of it was optional friction - every step was something
+Docker Desktop genuinely required on this machine, not something to
+"just skip."
+
+Once the engine was up, built and ran both containers for real rather
+than assuming the config was right: `docker compose build` succeeded,
+`docker compose up -d` started both, backend logs showed it correctly
+building the index from all 6 sample documents on first boot, `/health`
+returned `{"status":"ok"}`, the frontend responded on `:5173`, and a real
+question through the containerized backend (`POST /ask`, "What was Q3
+revenue?") came back correct and grounded with all 5 expected sources -
+including the scanned-PDF chunk, so the OCR ingestion path works inside
+the container too, not just on bare metal. Also caught and fixed a real
+cross-platform bug before it could bite anyone else cloning this on
+Windows: `docker-entrypoint.sh`'s shebang line would silently get
+corrupted to CRLF on checkout because of this repo's line-ending
+settings, which breaks a shell script's execution in a Linux container -
+added a `.gitattributes` rule forcing `*.sh` to stay LF regardless.
