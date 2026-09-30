@@ -688,3 +688,55 @@ Windows: `docker-entrypoint.sh`'s shebang line would silently get
 corrupted to CRLF on checkout because of this repo's line-ending
 settings, which breaks a shell script's execution in a Linux container -
 added a `.gitattributes` rule forcing `*.sh` to stay LF regardless.
+
+## 36. Kubernetes, and two real bugs it surfaced
+
+Set up a local Kubernetes cluster with `kind` (runs a full cluster as
+Docker containers, no separate VM tooling needed) and wrote real manifests
+under `k8s/`: a Deployment + Service for the backend, one for the
+frontend, and a PersistentVolumeClaim for the Qdrant data so the index
+survives a pod restart. API keys go in via a Secret created directly from
+`.env` (`kubectl create secret generic ... --from-env-file=.env`) rather
+than ever being committed as YAML.
+
+First cluster-creation attempt failed outright with a containerd/systemd
+error inside the kind node - turned out to be Docker Desktop itself in a
+bad state after an OS-level Docker update installed mid-session while the
+old daemon was still running, causing a client/server API version
+mismatch. Fully quitting and relaunching Docker Desktop fixed it before
+kind ever got involved.
+
+Once the cluster was actually up, deploying surfaced two real, independent
+bugs - neither of them a Kubernetes problem:
+
+**Bug 1 - the vision-OCR model was gone again.** The backend pod crashed
+on its first startup: `qwen/qwen3.6-27b` (the vision-OCR model, wired in
+back in step 27) no longer exists on Groq - the same class of deprecation
+that hit the text models in step 28. Checked Groq's current model list,
+found `qwen/qwen3.8-27b`, and confirmed it actually supports image input
+with a real OCR call before switching `app/config.py` to it - didn't just
+assume the version bump meant the same capability.
+
+**Bug 2 - a crash was silently treated as a complete index.** The pod's
+crash left 5 of 6 documents already indexed (Qdrant creates `meta.json` on
+the *first* successfully-added document, not when the whole build
+finishes). Kubernetes restarted the container automatically, the
+entrypoint saw `meta.json` already there, assumed the index was done, and
+launched `uvicorn` straight on a silently incomplete 13-chunk index
+missing the scanned PDF entirely - no error, no indication anything was
+wrong. Only caught this by actually checking the indexed chunk count
+against what was expected, not by trusting that "the pod is Ready" meant
+"the pod is correct." Fixed by switching the entrypoint's check from
+`meta.json`'s existence to a dedicated `.build_complete` marker file that
+only gets created after `build_index.py` exits successfully - a crash now
+always triggers a full, honest retry (safe to redo, since chunk upserts
+are idempotent) instead of quietly running on partial data.
+
+After both fixes: rebuilt the image, reloaded it into the kind cluster,
+deleted and recreated the pod fresh, confirmed all 14 expected chunks were
+present (including the scanned PDF), and sent a real question through a
+port-forwarded connection specifically targeting the OCR-derived content -
+got back a correct, grounded answer citing that exact chunk. Verified the
+same way Docker was verified in step 35: by actually running it and
+checking the real output, not by assuming the YAML was correct because it
+applied without error.

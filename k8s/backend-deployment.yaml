@@ -1,0 +1,49 @@
+# The API keys this needs come from a Secret named "verifiedrag-secrets",
+# created directly from .env rather than committed as YAML - see k8s/README.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: verifiedrag-backend:latest
+          imagePullPolicy: Never  # image is loaded straight into the kind node, not pulled from a registry
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: verifiedrag-secrets
+          volumeMounts:
+            - name: qdrant-data
+              mountPath: /app/data/qdrant
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: qdrant-data
+          persistentVolumeClaim:
+            claimName: qdrant-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
